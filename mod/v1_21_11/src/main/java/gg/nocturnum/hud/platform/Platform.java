@@ -196,6 +196,18 @@ public final class Platform {
 
     public static float optionFov() { return Minecraft.getInstance().options.fov().get(); }
 
+    /** Switches to third person (when asked) and returns the previous camera type ordinal. */
+    public static int cameraType(boolean thirdBack) {
+        var o = Minecraft.getInstance().options;
+        int prev = o.getCameraType().ordinal();
+        if (thirdBack) o.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+        return prev;
+    }
+
+    public static void restoreCameraType(int ordinal) {
+        Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.values()[ordinal]);
+    }
+
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(c -> Hud.tick());
         HudElementRegistry.attachElementAfter(VanillaHudElements.SUBTITLES, Identifier.fromNamespaceAndPath("nocturnum", "hud"),
@@ -211,6 +223,31 @@ public final class Platform {
                 net.fabricmc.fabric.api.client.screen.v1.Screens.getButtons(screen).add(b);
             }
         });
+        // leave protection: wrap the "disconnect" button of the pause menu
+        net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+            if (screen instanceof net.minecraft.client.gui.screens.PauseScreen ps) {
+                var d = ((gg.nocturnum.hud.mixin.PauseScreenAccess) ps).nocturnum$disconnectButton();
+                if (d == null) return;
+                var acc = (gg.nocturnum.hud.mixin.ButtonAccess) d;
+                var orig = acc.nocturnum$getOnPress();
+                acc.nocturnum$setOnPress(b -> {
+                    if (gg.nocturnum.hud.module.ComfortModules.LeaveProtection.shouldAsk()) {
+                        openView(new gg.nocturnum.hud.ui.ConfirmView(gg.nocturnum.hud.util.Lang.t("leave.title"), gg.nocturnum.hud.util.Lang.t("leave.text"),
+                            gg.nocturnum.hud.util.Lang.t("leave.yes"), gg.nocturnum.hud.util.Lang.t("leave.stay"), () -> orig.onPress(b), null));
+                    } else {
+                        orig.onPress(b);
+                    }
+                });
+            }
+        });
+        // scoreboard and tab list editors
+        HudElementRegistry.replaceElement(VanillaHudElements.SCOREBOARD, original -> (graphics, tracker) ->
+            gg.nocturnum.hud.module.ComfortModules.ScoreboardEditor.wrap(new Gfx(graphics), () -> original.render(graphics, tracker)));
+        HudElementRegistry.replaceElement(VanillaHudElements.PLAYER_LIST, original -> (graphics, tracker) ->
+            gg.nocturnum.hud.module.ComfortModules.TabEditor.wrap(new Gfx(graphics), () -> original.render(graphics, tracker)));
+        // timestamps and click-to-copy for system / server messages
+        net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.MODIFY_GAME.register((msg, overlay) ->
+            overlay ? msg : gg.nocturnum.hud.module.ComfortModules.EnhancedChat.decorate(msg));
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
             if (world.isClientSide()) gg.nocturnum.hud.module.PackModules.onAttack(entity);
             return InteractionResult.PASS;

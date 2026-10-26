@@ -4,5 +4,5 @@
   "package": "gg.nocturnum.hud.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": ["GameRendererMixin", "LoadingOverlayMixin", "ScreenEffectMixin"],
-  "injectors": { "defaultRequire": 1 }
+  "injectors": { "defaultRequire": 0 }
 }

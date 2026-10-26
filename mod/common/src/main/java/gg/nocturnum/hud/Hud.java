@@ -72,6 +72,16 @@ public final class Hud {
             if (debugTicks > open - 100 && debugTicks < open - 30) Game.player().setDeltaMovement(0.12, Game.player().getDeltaMovement().y, 0.04);
             if (debugTicks == open - 70 || debugTicks == open - 40) Game.player().jumpFromGround();
         }
+        if (d.contains("fx2") && world && Game.inWorld() && debugTicks == open - 100) {
+            var wmod = (gg.nocturnum.hud.module.CameraModules.Weather) Config.byId("weather");
+            wmod.mode.set(2);
+            wmod.setEnabled(true);
+            var fl = (gg.nocturnum.hud.module.CameraModules.Freelook) Config.byId("freelook");
+            fl.setEnabled(true);
+            fl.turn(400, 0);
+            for (String id : new String[]{"scoreboard", "tabeditor", "enhancedchat", "screenshots"}) Config.byId(id).setEnabled(true);
+            Platform.chat("test message");
+        }
         if (debugTicks == open + 60 && d.contains("shot")) Platform.debugShot();
         if (d.contains("loadshot") && (debugTicks == 2 || debugTicks == 12 || debugTicks == 25)) Platform.debugShot();
     }

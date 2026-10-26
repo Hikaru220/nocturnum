@@ -273,6 +273,7 @@ lang_pack.sounds(a, mod, st, opt, scale)
 lang_pack.view(a, mod, st, opt, scale)
 lang_pack.social(a, mod, st, opt, scale)
 lang_pack.labels(a, mod, st, opt, scale)
+lang_pack.camera(a, mod, st, opt, scale)
 
 
 def write(root):
