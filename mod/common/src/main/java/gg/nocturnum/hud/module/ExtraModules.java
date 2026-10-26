@@ -27,11 +27,7 @@ public final class ExtraModules {
         Config.register(new LoadingScreenModule());
         Config.register(new MainMenuModule());
         PackModules.registerAll();
-        try {
-            VisualModules.registerAll();
-        } catch (NoClassDefFoundError ignored) {
-            // world-rendering visuals are optional per game version
-        }
+        VisualModules.registerAll();
     }
 
     /** Custom crosshair: shape, colour, size, centre dot, expands when you attack. */

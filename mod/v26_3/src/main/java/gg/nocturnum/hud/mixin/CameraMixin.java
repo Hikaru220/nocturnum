@@ -13,8 +13,10 @@ public class CameraMixin {
     @Inject(method = "calculateFov", at = @At("RETURN"), cancellable = true)
     private void nocturnum$zoom(float partial, CallbackInfoReturnable<Float> cir) {
         ExtraModules.Zoom z = Config.get(ExtraModules.Zoom.class);
-        if (!z.enabled()) return;
-        float d = z.divisor();
-        if (d > 1.001f) cir.setReturnValue(cir.getReturnValue() / d);
+        if (z.enabled()) {
+            float d = z.divisor();
+            if (d > 1.001f) cir.setReturnValue(cir.getReturnValue() / d);
+        }
+        gg.nocturnum.hud.gfx.Projection.lastFov = cir.getReturnValue();
     }
 }

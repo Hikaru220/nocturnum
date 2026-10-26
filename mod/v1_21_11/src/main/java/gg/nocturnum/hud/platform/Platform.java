@@ -160,6 +160,31 @@ public final class Platform {
 
     public static boolean titleScreenOpen() { return Minecraft.getInstance().screen instanceof net.minecraft.client.gui.screens.TitleScreen; }
 
+    /** {x, y, z, qx, qy, qz, qw, fovDegrees, thirdPerson} of the render camera, or null. */
+    public static double[] cameraInfo() {
+        var mc = Minecraft.getInstance();
+        var cam = mc.gameRenderer.getMainCamera();
+        if (cam == null || mc.level == null) return null;
+        var p = cam.position();
+        var q = cam.rotation();
+        return new double[]{p.x, p.y, p.z, q.x, q.y, q.z, q.w, mc.options.fov().get(), cam.isDetached() ? 1 : 0};
+    }
+
+    public static void spawnHitParticles(double x, double y, double z, String shape, int count, int argb) {
+        var level = Minecraft.getInstance().level;
+        if (level == null) return;
+        var rnd = java.util.concurrent.ThreadLocalRandom.current();
+        net.minecraft.core.particles.ParticleOptions type = switch (shape) {
+            case "hearts" -> net.minecraft.core.particles.ParticleTypes.HEART;
+            case "stars" -> net.minecraft.core.particles.ParticleTypes.END_ROD;
+            case "dust" -> new net.minecraft.core.particles.DustParticleOptions(argb & 0xFFFFFF, 1.2f);
+            default -> net.minecraft.core.particles.ParticleTypes.CRIT;
+        };
+        for (int i = 0; i < count; i++) {
+            level.addParticle(type, x, y, z, (rnd.nextDouble() - 0.5) * 0.6, rnd.nextDouble() * 0.4, (rnd.nextDouble() - 0.5) * 0.6);
+        }
+    }
+
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(c -> Hud.tick());
         HudElementRegistry.attachElementAfter(VanillaHudElements.SUBTITLES, Identifier.fromNamespaceAndPath("nocturnum", "hud"),

@@ -115,6 +115,22 @@ public final class Draw {
         g.text(s, Math.round(cx - g.textW(s) / 2f), y, color, shadow);
     }
 
+    /** Straight line of the given thickness built from small squares (no GL line state needed). */
+    public static void line(Gfx g, float x1, float y1, float x2, float y2, float thick, int color) {
+        if (Colors.a(color) == 0) return;
+        float dx = x2 - x1, dy = y2 - y1;
+        float len = (float) Math.sqrt(dx * dx + dy * dy);
+        if (len > 4000 || Float.isNaN(len)) return;
+        if (Math.max(Math.max(x1, x2), Math.max(y1, y2)) < -50 || Math.min(Math.min(x1, x2), Math.min(y1, y2)) > 6000) return;
+        int steps = Math.max(1, (int) Math.ceil(len));
+        float h = Math.max(1f, thick);
+        for (int i = 0; i <= steps; i++) {
+            float t = i / (float) steps;
+            int x = Math.round(x1 + dx * t - h / 2f), y = Math.round(y1 + dy * t - h / 2f);
+            g.fill(x, y, x + Math.round(h), y + Math.round(h), color);
+        }
+    }
+
     public static void circle(Gfx g, float cx, float cy, float r, int color) {
         rect(g, cx - r, cy - r, r * 2, r * 2, r, color);
     }

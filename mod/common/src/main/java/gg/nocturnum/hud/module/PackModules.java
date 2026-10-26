@@ -43,6 +43,7 @@ public final class PackModules {
         Config.get(TargetHudModule.class).onAttack(e);
         Config.get(PackHud.Combo.class).onAttack(e);
         Config.get(PackHud.Reach.class).onAttack(e);
+        VisualModules.attack(e);
     }
 
     /** Sends a command or message on a key press, as if the player typed it. At most once per second per bind. */

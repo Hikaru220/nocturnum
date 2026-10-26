@@ -58,6 +58,18 @@ public final class Hud {
             if (d.contains("clickgui")) Platform.openView(new ClickGuiView());
             else if (d.contains("editor")) Platform.openView(new gg.nocturnum.hud.ui.HudEditorView(null));
         }
+        if (d.contains("fx") && world && Game.inWorld()) {
+            if (debugTicks == open - 120) {
+                for (String id : new String[]{"jumpcircles", "chinahat", "trails", "blockoverlay", "hiteffects", "crosshair", "hitcolor"}) {
+                    var m = Config.byId(id);
+                    if (m != null) m.setEnabled(true);
+                }
+                Game.mc().options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+                Game.player().setXRot(45);
+            }
+            if (debugTicks > open - 100 && debugTicks < open - 30) Game.player().setDeltaMovement(0.12, Game.player().getDeltaMovement().y, 0.04);
+            if (debugTicks == open - 70 || debugTicks == open - 40) Game.player().jumpFromGround();
+        }
         if (debugTicks == open + 60 && d.contains("shot")) Platform.debugShot();
         if (d.contains("loadshot") && (debugTicks == 2 || debugTicks == 12 || debugTicks == 25)) Platform.debugShot();
     }
@@ -104,6 +116,7 @@ public final class Hud {
     /** Draws all HUD elements. Called from the platform's HUD callback. */
     public static void render(Gfx g, float partial) {
         if (!started) return;
+        gg.nocturnum.hud.gfx.Projection.begin(g);
         for (Module m : Config.modules()) {
             if (!m.hud) {
                 if (m.enabled()) {
