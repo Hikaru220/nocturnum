@@ -6,6 +6,7 @@ mod instances;
 mod java;
 mod launch;
 mod loaders;
+mod media;
 mod modrinth;
 mod net;
 mod paths;
@@ -741,6 +742,7 @@ pub fn run() {
         a.iter().position(|x| x == "--launch").and_then(|i| a.get(i + 1).cloned())
     };
     rpc::start();
+    media::start();
     rpc::set(rpc::State::Launcher);
     #[cfg(debug_assertions)]
     let selftest: Option<(String, String)> = {
@@ -876,6 +878,7 @@ async fn selftest_run(app: AppHandle, mc: String, loader: String) -> i32 {
         Err(e) => { say!("SELFTEST FAIL create: {}", e); return 1; }
     };
     say!("instance {}", inst.id);
+    if let Some(b) = media::bridge() { say!("MEDIA {} {}", b.port, b.token); }
     if let Ok(dbg) = std::env::var("NOCTURNUM_DEBUG") {
         if let Ok(mut i) = instances::get(&inst.id) {
             i.jvm_args = format!("-Dnocturnum.debug={dbg}");

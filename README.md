@@ -43,7 +43,7 @@ Developer tools: `mod/tools/shot.sh <mc> <flags> [hold]` launches a throw-away i
 (`world,clickgui,shot`, `world,editor,shot`, `world,fx,shot`).
 
 ## Roadmap (not done yet)
-- Media player HUD (needs the launcher to read Windows SMTC and talk to the mod over 127.0.0.1).
+- Media player: implemented (launcher reads Windows SMTC, serves it on 127.0.0.1 with a per-launch token, HUD plate + hotkeys); still needs verification with Yandex Music / Spotify / VK.
 - ESP, Target ESP, entity hitboxes and minimap of the Anarchy category.
 - Shader-based features: Motion Blur, saturation, glass hands, enchant colour, 3D skins, weather; scoreboard and tab editors, friends, waypoints, enhanced chat, leave protection, screenshot uploader.
 - Custom UI sounds, Sound Controller, Hit/Kill sounds, Freelook, Ambience, TNT timer, chat heads.

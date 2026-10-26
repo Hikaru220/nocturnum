@@ -136,3 +136,17 @@ def fx(a, mod, st, opt, scale):
     st("hiteffects", "wave", "Волна", "Wave")
     mod("hitcolor", "HitColor", "HitColor", "Цвет вспышки, когда по кому-то попадаешь", "Flash colour when you hit someone")
     st("hitcolor", "color", "Цвет", "Colour")
+
+
+def media(a, mod, st, opt, scale):
+    a("media.sample", "Название трека", "Track title")
+    mod("mediaplayer", "Медиаплеер", "Media player", "Какой трек сейчас играет на ПК (Яндекс Музыка, Spotify, браузер): обложка, название, исполнитель, прогресс. Работает через лаунчер",
+        "The track playing on your PC (Yandex Music, Spotify, browser): cover, title, artist, progress. Works through the launcher")
+    scale("mediaplayer")
+    st("mediaplayer", "view", "Вид", "View")
+    opt("mediaplayer", "view", "compact", "Компактный", "Compact")
+    opt("mediaplayer", "view", "large", "Большой", "Large")
+    st("mediaplayer", "hidePaused", "Скрывать при паузе", "Hide when paused")
+    st("mediaplayer", "prevKey", "Клавиша: назад", "Key: previous", "Горячая клавиша предыдущего трека", "Hotkey for the previous track")
+    st("mediaplayer", "toggleKey", "Клавиша: пауза", "Key: pause", "Горячая клавиша паузы и воспроизведения", "Hotkey for pause / play")
+    st("mediaplayer", "nextKey", "Клавиша: вперёд", "Key: next", "Горячая клавиша следующего трека", "Hotkey for the next track")

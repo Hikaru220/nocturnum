@@ -32,6 +32,7 @@ public final class PackModules {
         Config.register(new PackHud.PlayTime());
         Config.register(new PackHud.Stopwatch());
         Config.register(new PackHud.PerfMonitor());
+        Config.register(new MediaPlayerModule());
         Config.register(new CommandBinds());
         Config.register(new BackgroundFps());
         Config.register(new Boost());

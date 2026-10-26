@@ -252,7 +252,11 @@ pub async fn prepare(app: &AppHandle, inst: &Instance, st: &Settings, pid: &str)
             }
         }
     }
-    jvm.push(format!("-Dnocturnum.launcher=1"));
+    jvm.push("-Dnocturnum.launcher=1".to_string());
+    if let Some(b) = crate::media::bridge() {
+        jvm.push(format!("-Dnocturnum.media=127.0.0.1:{}", b.port));
+        jvm.push(format!("-Dnocturnum.media.token={}", b.token));
+    }
     jvm.push(format!("-Dnocturnum.state={}", game_dir.join(".nocturnum").join("state.json").display()));
 
     let main_class = resolved["mainClass"].as_str().ok_or_else(|| anyhow!("mainClass не указан"))?.to_string();
