@@ -354,6 +354,7 @@ async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: 
         set_gpu_preference(&prepared.java);
     }
     let _ = std::fs::remove_file(prepared.game_dir.join(".nocturnum").join("state.json"));
+    sync_blacklist(&prepared.game_dir).await;
 
     let mut cmd = tokio::process::Command::new(&prepared.java);
     cmd.args(&prepared.args)
@@ -368,6 +369,9 @@ async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: 
     cmd.creation_flags(0x08000000);
     let mut child = cmd.spawn().with_context(|| format!("не удалось запустить {}", prepared.java.display()))?;
     let child_pid = child.id().unwrap_or(0);
+    if st.high_priority {
+        set_high_priority(child_pid);
+    }
     RUNNING.lock().unwrap().insert(inst.id.clone(), Running { pid: child_pid });
     LOGS.lock().unwrap().insert(inst.id.clone(), VecDeque::new());
     net::emit_progress(app, pid, "Игра запущена", 100.0, 0.0, true, None);
@@ -454,6 +458,41 @@ async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: 
     let _ = app.emit("game-exit", GameExit { instance_id: id.clone(), code, hint });
     Ok(())
 }
+
+const BLACKLIST_URL: &str = "https://raw.githubusercontent.com/Hikaru220/nocturnum/main/config/server-blacklist.json";
+
+/// Download the server blacklist for the Anarchy category (falls back to the cached copy offline).
+async fn sync_blacklist(game_dir: &std::path::Path) {
+    let cache = paths::cache_dir().join("server-blacklist.json");
+    let body = match tokio::time::timeout(std::time::Duration::from_secs(4), net::get_text(BLACKLIST_URL)).await {
+        Ok(Ok(t)) if serde_json::from_str::<serde_json::Value>(&t).is_ok() => {
+            let _ = std::fs::create_dir_all(paths::cache_dir());
+            let _ = std::fs::write(&cache, &t);
+            Some(t)
+        }
+        _ => std::fs::read_to_string(&cache).ok(),
+    };
+    if let Some(t) = body {
+        let dir = game_dir.join("config").join("nocturnum");
+        let _ = std::fs::create_dir_all(&dir);
+        let _ = std::fs::write(dir.join("blacklist.json"), t);
+    }
+}
+
+#[cfg(windows)]
+fn set_high_priority(pid: u32) {
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{OpenProcess, SetPriorityClass, ABOVE_NORMAL_PRIORITY_CLASS, PROCESS_SET_INFORMATION};
+    unsafe {
+        let h = OpenProcess(PROCESS_SET_INFORMATION, 0, pid);
+        if !h.is_null() {
+            SetPriorityClass(h, ABOVE_NORMAL_PRIORITY_CLASS);
+            CloseHandle(h);
+        }
+    }
+}
+#[cfg(not(windows))]
+fn set_high_priority(_pid: u32) {}
 
 pub fn kill(id: &str) -> R<()> {
     let pid = RUNNING.lock().unwrap().get(id).map(|r| r.pid);

@@ -78,3 +78,18 @@ def pack(a, mod, st, opt, scale):
     opt("fullbright", "method", "effect", "Эффект", "Effect")
     opt("fullbright", "method", "gamma", "Гамма", "Gamma")
     st("fullbright", "strength", "Сила", "Strength")
+
+
+def menu(a, mod, st):
+    for k, ru, en in [
+        ("menu.tagline", "Играй красиво", "Play beautifully"),
+        ("menu.singleplayer", "Одиночная игра", "Singleplayer"),
+        ("menu.multiplayer", "Сетевая игра", "Multiplayer"),
+        ("menu.options", "Настройки", "Options"),
+        ("menu.quit", "Выход", "Quit"),
+        ("menu.account", "Аккаунт", "Account"),
+        ("menu.quick", "Быстрое подключение", "Quick connect"),
+    ]:
+        a(k, ru, en)
+    mod("mainmenu", "Главное меню", "Main menu", "Своё главное меню: ночное небо, быстрые кнопки и быстрое подключение к серверам",
+        "Own title screen: night sky, quick buttons and quick connect to servers")

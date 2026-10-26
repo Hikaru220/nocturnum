@@ -113,6 +113,45 @@ public final class Platform {
         }
     }
 
+    public static void openSingleplayer() {
+        var mc = Minecraft.getInstance();
+        mc.gui.setScreen(new net.minecraft.client.gui.screens.worldselection.SelectWorldScreen(mc.gui.screen()));
+    }
+
+    public static void openMultiplayer() {
+        var mc = Minecraft.getInstance();
+        mc.gui.setScreen(new net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(mc.gui.screen()));
+    }
+
+    public static void openOptions() {
+        var mc = Minecraft.getInstance();
+        mc.gui.setScreen(new net.minecraft.client.gui.screens.options.OptionsScreen(mc.gui.screen(), mc.options));
+    }
+
+    public static void quit() { Minecraft.getInstance().stop(); }
+
+    public static String gameVersion() { return net.minecraft.SharedConstants.getCurrentVersion().name(); }
+
+    /** Last servers from the multiplayer list as {name, address}. */
+    public static java.util.List<String[]> recentServers(int n) {
+        var out = new java.util.ArrayList<String[]>();
+        try {
+            var list = new net.minecraft.client.multiplayer.ServerList(Minecraft.getInstance());
+            list.load();
+            for (int i = 0; i < Math.min(n, list.size()); i++) out.add(new String[]{list.get(i).name, list.get(i).ip});
+        } catch (RuntimeException ignored) {
+        }
+        return out;
+    }
+
+    public static void joinServer(String name, String ip) {
+        var mc = Minecraft.getInstance();
+        var data = new net.minecraft.client.multiplayer.ServerData(name, ip, net.minecraft.client.multiplayer.ServerData.Type.OTHER);
+        net.minecraft.client.gui.screens.ConnectScreen.startConnecting(mc.gui.screen(), mc, net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(ip), data, false, null);
+    }
+
+    public static boolean titleScreenOpen() { return Minecraft.getInstance().gui.screen() instanceof net.minecraft.client.gui.screens.TitleScreen; }
+
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(c -> Hud.tick());
         HudElementRegistry.attachElementAfter(VanillaHudElements.SUBTITLES, Identifier.fromNamespaceAndPath("nocturnum", "hud"),
@@ -120,6 +159,13 @@ public final class Platform {
         // hide the vanilla crosshair while the custom one is enabled
         HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, original -> (graphics, tracker) -> {
             if (!Config.get(gg.nocturnum.hud.module.ExtraModules.Crosshair.class).enabled()) original.extractRenderState(graphics, tracker);
+        });
+        net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+            if (screen instanceof net.minecraft.client.gui.screens.PauseScreen) {
+                var b = net.minecraft.client.gui.components.Button.builder(net.minecraft.network.chat.Component.literal("Nocturnum"),
+                    x -> openView(new gg.nocturnum.hud.ui.ClickGuiView())).bounds(6, 6, 90, 20).build();
+                net.fabricmc.fabric.api.client.screen.v1.Screens.getWidgets(screen).add(b);
+            }
         });
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
             if (world.isClientSide()) gg.nocturnum.hud.module.PackModules.onAttack(entity);

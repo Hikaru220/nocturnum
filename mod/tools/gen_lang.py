@@ -265,6 +265,7 @@ for i, (ru, en) in enumerate([
 
 import lang_pack
 lang_pack.pack(a, mod, st, opt, scale)
+lang_pack.menu(a, mod, st)
 
 
 def write(root):

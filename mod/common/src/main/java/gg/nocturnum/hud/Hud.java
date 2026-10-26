@@ -95,6 +95,7 @@ public final class Hud {
         boolean down = mk >= 0 && Platform.isKeyDown(mk);
         if (down && !menuKeyDown && !Platform.screenOpen() && inGame) Platform.openView(new ClickGuiView());
         menuKeyDown = down;
+        if (Platform.titleScreenOpen() && Config.get(gg.nocturnum.hud.module.MainMenuModule.class).active()) Platform.openView(new gg.nocturnum.hud.ui.MainMenuView());
         Config.tick();
         AnarchyProfiles.tick();
         Config.get(PackModules.Boost.class).watch();

@@ -25,6 +25,7 @@ public final class ExtraModules {
         Config.register(new DeathCoords());
         Config.register(new DiscordRpc());
         Config.register(new LoadingScreenModule());
+        Config.register(new MainMenuModule());
         PackModules.registerAll();
         try {
             VisualModules.registerAll();
