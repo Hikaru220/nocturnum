@@ -24,8 +24,8 @@ specification are still open (see the roadmap below). GPL-3.0-or-later.
 ### HUD mod (`mod/`, Minecraft **1.21.11** and **26.3**)
 - ClickGUI (Right Shift): columns per category, instant apply, search, favourites, profiles (share code), themes, Ctrl+Z, tooltips in Russian with the English name.
 - HUD layout editor (drag with the mouse, snapping, wheel = scale), 25+ HUD elements, notifications, own loading screen, main menu, pause-menu button.
-- Effects: Jump Circles, Trails, China Hat, BlockOverlay, hit effects, custom crosshair, zoom, toggle sprint, boost mode, background FPS limit.
-- Category **Anarchy** (off by default, per-server profiles, blacklist downloaded by the launcher): Fullbright. The mod never hides itself from moderators.
+- Effects: Jump Circles, Trails, China Hat, BlockOverlay, hit effects, custom crosshair, zoom, sprint-FOV, low fire, no hurt shake, TNT timer, waypoints, friends, media player, UI/hit/kill sounds, toggle sprint, boost mode, background FPS limit.
+- Category **Anarchy** (off by default, per-server profiles, blacklist downloaded by the launcher): Fullbright, ESP, Target ESP, hitboxes, minimap. The mod never hides itself from moderators.
 - Rule of the mod: it displays information and decorates *your* screen; it never presses anything for you. Command binds send chat commands only when you press the key (max 1/s, confirmation for dangerous commands).
 
 ## Build
@@ -43,12 +43,14 @@ Developer tools: `mod/tools/shot.sh <mc> <flags> [hold]` launches a throw-away i
 (`world,clickgui,shot`, `world,editor,shot`, `world,fx,shot`).
 
 ## Roadmap (not done yet)
-- Media player: implemented (launcher reads Windows SMTC, serves it on 127.0.0.1 with a per-launch token, HUD plate + hotkeys); still needs verification with Yandex Music / Spotify / VK.
-- ESP, Target ESP, entity hitboxes and minimap of the Anarchy category.
-- Shader-based features: Motion Blur, saturation, glass hands, enchant colour, 3D skins, weather; scoreboard and tab editors, friends, waypoints, enhanced chat, leave protection, screenshot uploader.
-- Custom UI sounds, Sound Controller, Hit/Kill sounds, Freelook, Ambience, TNT timer, chat heads.
-- Signed installer and auto-update (needs a code-signing certificate and an update key), CurseForge downloads need `CURSEFORGE_API_KEY`.
-- Mod ports to the versions between 1.12.2 and 1.21.10 (the launcher already runs them; the HUD mod is available for 1.21.11 and 26.3).
+- Shader-based features: Motion Blur, saturation, glass hands, enchant colour, 3D skins, weather.
+- Scoreboard and tab editors, enhanced chat, leave protection, screenshot uploader, scrolling tooltips, Freelook, Ambience, chat heads, item physics.
+- Media player still needs a live check with Yandex Music / Spotify / VK; Linux (MPRIS) and macOS are not implemented.
+- Signed installer and auto-update (needs a code-signing certificate and an update key); CurseForge downloads need `CURSEFORGE_API_KEY`.
+- Mod ports to the versions between 1.12.2 and 1.21.10 (the launcher already runs them; the HUD mod exists for 1.21.11 and 26.3).
+- Server blacklist for the Anarchy category only contains an example entry; fill it from each server's official rules.
+
+Measured on a dev PC: installer 3.3 MB, window appears in ~0.25 s, launcher ~40 MB + WebView2 ~115 MB.
 
 ## Legal
 Minecraft is a trademark of Mojang/Microsoft; this project is not affiliated with them. Optimisation mods (Sodium, Lithium, …) are
