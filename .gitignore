@@ -20,3 +20,5 @@ mod/*/build
 mod/build
 mod/.idea
 *.part
+.testdata-ui
+.tauribuild.log

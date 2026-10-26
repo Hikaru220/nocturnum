@@ -6,7 +6,6 @@ import gg.nocturnum.hud.config.Setting;
 import gg.nocturnum.hud.gfx.Gfx;
 import gg.nocturnum.hud.util.Lang;
 import gg.nocturnum.hud.util.Tween;
-import org.lwjgl.glfw.GLFW;
 
 /** Settings of the menu itself and the shared look of all HUD plates. */
 public final class ClickGuiModule extends Module {
@@ -25,7 +24,7 @@ public final class ClickGuiModule extends Module {
 
     public ClickGuiModule() {
         super("clickgui", Category.OTHER, true, false, 0, 0);
-        keybind.set(GLFW.GLFW_KEY_RIGHT_SHIFT);
+        keybind.set(344);
         keybind.owner = this;
     }
 

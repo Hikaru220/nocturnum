@@ -36,12 +36,16 @@ public final class Platform {
         return key >= 0 && InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), key);
     }
 
-    public static String keyName(int key) {
-        if (key < 0) return "—";
-        return InputConstants.Type.KEYSYM.getOrCreate(key).getDisplayName().getString();
-    }
+    public static String keyName(int key) { return gg.nocturnum.hud.util.KeyNames.of(key); }
 
     public static void openView(View v) { Minecraft.getInstance().setScreen(new ViewScreen(v)); }
+
+    public static void chat(String s) {
+        var p = Minecraft.getInstance().player;
+        if (p != null) p.displayClientMessage(net.minecraft.network.chat.Component.literal(s), false);
+    }
+
+    public static boolean screenOpen() { return Minecraft.getInstance().screen != null; }
 
     public static void closeScreen() { Minecraft.getInstance().setScreen(null); }
 
@@ -71,6 +75,10 @@ public final class Platform {
         ClientTickEvents.END_CLIENT_TICK.register(c -> Hud.tick());
         HudElementRegistry.attachElementAfter(VanillaHudElements.SUBTITLES, Identifier.fromNamespaceAndPath("nocturnum", "hud"),
             (graphics, tracker) -> Hud.render(new Gfx(graphics), tracker.getGameTimeDeltaPartialTick(false)));
+        // hide the vanilla crosshair while the custom one is enabled
+        HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, original -> (graphics, tracker) -> {
+            if (!Config.get(gg.nocturnum.hud.module.ExtraModules.Crosshair.class).enabled()) original.render(graphics, tracker);
+        });
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
             if (world.isClientSide()) Config.get(TargetHudModule.class).onAttack(entity);
             return InteractionResult.PASS;

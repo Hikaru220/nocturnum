@@ -16,6 +16,9 @@ pub const FABRIC_API: &str = "P7dR8mSH";
 pub const SODIUM: &str = "AANobbMI";
 pub const LITHIUM: &str = "gvQqBUqZ";
 
+/// Layer 1 of the optimisation stack (ТЗ пакет 2, п. 7.1): original files from Modrinth, never bundled.
+pub const OPTIMIZATION_SLUGS: &[&str] = &["sodium", "lithium", "ferrite-core", "modernfix", "immediatelyfast", "entityculling", "moreculling", "krypton"];
+
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HudStatus {
@@ -101,10 +104,17 @@ pub async fn install(app: &AppHandle, inst: &Instance) -> R<()> {
         modrinth::install_project(app, &pid, inst, FABRIC_API, None, "mod").await?;
     }
     let s = settings::load();
-    if s.install_sodium {
-        for p in [SODIUM, LITHIUM] {
-            if !has(p) {
-                let _ = modrinth::install_project(app, &pid, inst, p, None, "mod").await;
+    if s.install_sodium || s.install_optimization {
+        for slug in OPTIMIZATION_SLUGS {
+            // resolve slug -> project id so the "already installed" check works
+            let Ok(p) = modrinth::project(slug).await else { continue };
+            let Some(pid2) = p["id"].as_str() else { continue };
+            if idx.values().any(|m| m.project_id == pid2) {
+                continue;
+            }
+            // incompatible with this game version -> skipped quietly, never crashes the launch
+            if let Err(e) = modrinth::install_project(app, &pid, inst, pid2, None, "mod").await {
+                crate::net::emit_progress(app, &pid, &format!("{slug}: пропущен ({e})"), 0.0, 0.0, false, None);
             }
         }
     }

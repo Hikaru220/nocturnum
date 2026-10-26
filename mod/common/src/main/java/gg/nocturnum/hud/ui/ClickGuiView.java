@@ -248,7 +248,7 @@ public final class ClickGuiView extends View {
             return;
         }
         float k = open.get();
-        uiScale = Math.max(0.55f, Math.min(1.25f, width / 640f));
+        uiScale = Math.max(0.5f, Math.min(1.25f, width / (columnOrder().size() * (COL_W + GAP) + 24f)));
         float vw = width / uiScale, vh = height / uiScale;
         float vmx = mx / uiScale, vmy = my / uiScale;
         defaultPositions(vw);
@@ -317,7 +317,7 @@ public final class ClickGuiView extends View {
         String title = id.equals("favorites") ? Lang.t("category.favorites") : Lang.t("category." + id);
         // header
         Draw.rect(g, 0, 0, COL_W, HEAD_H, 5, Theme.accent(235));
-        Draw.centeredText(g, title.toUpperCase(), COL_W / 2f, (HEAD_H - g.fontH()) / 2 + 1, 0xFF0D0D18, false);
+        Draw.centeredBold(g, title.toUpperCase(), COL_W / 2f, (HEAD_H - g.fontH()) / 2 + 1, 0xFF0D0D18, false);
         Ui.Hit head = ui.region(0, 0, COL_W, HEAD_H);
         head.press = (b, x, y) -> {
             dragging = c;

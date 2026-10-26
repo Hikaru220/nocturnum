@@ -1,5 +1,6 @@
 mod auth;
 mod error;
+mod hardware;
 mod hud;
 mod instances;
 mod java;
@@ -144,6 +145,11 @@ fn write_png(path: String, data_url: String) -> R<()> {
     Ok(())
 }
 
+#[tauri::command]
+async fn hardware_info() -> hardware::Hardware {
+    tauri::async_runtime::spawn_blocking(hardware::detect).await.unwrap_or_else(|_| hardware::detect())
+}
+
 // ---------- versions / loaders ----------
 
 #[tauri::command]
@@ -174,6 +180,18 @@ struct NewInstance {
     account_id: String,
 }
 
+fn smart_ram() -> u32 {
+    let mut sys = sysinfo::System::new();
+    sys.refresh_memory();
+    hardware::smart_ram_mb(sys.total_memory() / 1024 / 1024, 0)
+}
+
+fn preset_for(id: &str) -> R<()> {
+    let st = settings::load();
+    let tier = if st.perf_tier == "auto" { hardware::detect().tier } else { st.perf_tier.clone() };
+    instances::write_preset_tier(id, &tier)
+}
+
 #[tauri::command]
 fn list_instances() -> Vec<Instance> {
     instances::list()
@@ -196,12 +214,13 @@ fn create_instance(req: NewInstance) -> R<Instance> {
         hud_enabled: req.hud_enabled,
         account_id: req.account_id,
         created_at: instances::now(),
+        ram_mb: smart_ram(),
         ..Default::default()
     };
     instances::save(&inst)?;
     std::fs::create_dir_all(instances::game_dir(&id).join("mods"))?;
     if st.apply_preset {
-        instances::write_preset(&id)?;
+        preset_for(&id)?;
     }
     Ok(inst)
 }
@@ -231,7 +250,7 @@ fn open_instance_folder(id: String) -> R<()> {
 
 #[tauri::command]
 fn apply_preset_now(id: String) -> R<()> {
-    instances::write_preset(&id)
+    preset_for(&id)
 }
 
 #[tauri::command]
@@ -488,7 +507,7 @@ async fn create_from_mrpack(app: &AppHandle, path: &std::path::Path, pid: &str) 
     };
     instances::save(&inst)?;
     if st.apply_preset {
-        instances::write_preset(&id)?;
+        preset_for(&id)?;
     }
     modrinth::apply_mrpack(app, pid, &inst, path, false, st.downloads_threads as usize).await?;
     Ok(inst)
@@ -596,7 +615,7 @@ async fn import_curseforge(app: AppHandle, path: String) -> R<CfResult> {
     };
     instances::save(&inst)?;
     if st.apply_preset {
-        instances::write_preset(&id)?;
+        preset_for(&id)?;
     }
     let pid = "modpack:cf".to_string();
     let missing = modrinth::apply_cf(&app, &pid, &inst, &p, &meta, st.downloads_threads as usize).await?;
@@ -775,6 +794,7 @@ pub fn run() {
             get_settings,
             save_settings,
             system_info,
+            hardware_info,
             set_root_dir,
             get_launcher_log,
             open_path,

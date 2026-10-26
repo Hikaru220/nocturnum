@@ -152,14 +152,33 @@ pub const PRESET: &[(&str, &str)] = &[
     ("tutorialStep", "none"),
 ];
 
+/// Graphics values for a hardware tier (ТЗ пакет 2, 7.2 "Автонастройка под ПК").
+pub fn tier_values(tier: &str) -> Vec<(&'static str, &'static str)> {
+    match tier {
+        "low" => vec![("renderDistance", "6"), ("simulationDistance", "5"), ("graphicsMode", "0"), ("particles", "2"), ("maxFps", "90"), ("entityDistanceScaling", "0.75")],
+        "high" => vec![("renderDistance", "16"), ("simulationDistance", "10"), ("graphicsMode", "1"), ("particles", "0"), ("maxFps", "260")],
+        _ => vec![("renderDistance", "10"), ("simulationDistance", "8"), ("graphicsMode", "1"), ("particles", "1"), ("maxFps", "144")],
+    }
+}
+
 /// Write preset into options.txt, keeping any other keys already there.
 pub fn write_preset(id: &str) -> R<()> {
+    write_preset_tier(id, "")
+}
+
+pub fn write_preset_tier(id: &str, tier: &str) -> R<()> {
     let dir = game_dir(id);
     std::fs::create_dir_all(&dir)?;
     let file = dir.join("options.txt");
     let existing = std::fs::read_to_string(&file).unwrap_or_default();
     let mut lines: Vec<String> = existing.lines().map(String::from).collect();
-    for (k, v) in PRESET {
+    let mut values: Vec<(&str, &str)> = PRESET.to_vec();
+    if !tier.is_empty() {
+        for (k, v) in tier_values(tier) {
+            if let Some(e) = values.iter_mut().find(|(kk, _)| *kk == k) { e.1 = v; } else { values.push((k, v)); }
+        }
+    }
+    for (k, v) in values {
         let prefix = format!("{k}:");
         if let Some(l) = lines.iter_mut().find(|l| l.starts_with(&prefix)) {
             *l = format!("{k}:{v}");

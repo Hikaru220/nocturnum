@@ -30,6 +30,10 @@ pub struct Settings {
     pub reduce_motion: bool,
     pub ms_client_id: String,
     pub discord_app_id: String,
+    /// auto | low | mid | high — graphics preset tier (ТЗ пакет 2, п. 7.2)
+    pub perf_tier: String,
+    pub install_optimization: bool,
+    pub high_priority: bool,
 }
 
 impl Default for Settings {
@@ -61,6 +65,9 @@ impl Default for Settings {
             reduce_motion: false,
             ms_client_id: String::new(),
             discord_app_id: String::new(),
+            perf_tier: "auto".into(),
+            install_optimization: true,
+            high_priority: true,
         }
     }
 }

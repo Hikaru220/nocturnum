@@ -20,6 +20,10 @@ import java.util.Map;
 public final class Gfx {
     private static final FontDescription UI_FONT = new FontDescription.Resource(Identifier.fromNamespaceAndPath("nocturnum", "ui"));
     private static final Style UI_STYLE = Style.EMPTY.withFont(UI_FONT);
+    private static final Style BOLD_STYLE = Style.EMPTY.withFont(new FontDescription.Resource(Identifier.fromNamespaceAndPath("nocturnum", "ui_bold")));
+    private static final Map<String, Component> BOLD_CACHE = new LinkedHashMap<>(64, 0.75f, true) {
+        @Override protected boolean removeEldestEntry(Map.Entry<String, Component> e) { return size() > 200; }
+    };
     private static final Map<String, Component> CACHE = new LinkedHashMap<>(256, 0.75f, true) {
         @Override protected boolean removeEldestEntry(Map.Entry<String, Component> e) { return size() > 600; }
     };
@@ -44,6 +48,25 @@ public final class Gfx {
             CACHE.put(s, c);
         }
         return c;
+    }
+
+    /** Semi-bold text for titles and headers. */
+    public void textBold(String s, int x, int y, int argb, boolean shadow) {
+        if (!customFont) {
+            text(s, x, y, argb, shadow);
+            return;
+        }
+        Component c = BOLD_CACHE.get(s);
+        if (c == null) {
+            c = Component.literal(s).withStyle(BOLD_STYLE);
+            BOLD_CACHE.put(s, c);
+        }
+        g.drawString(font(), c, x, y, a(argb), shadow);
+    }
+
+    public int textBoldW(String s) {
+        if (!customFont) return textW(s);
+        return font().width(Component.literal(s).withStyle(BOLD_STYLE));
     }
 
     public int w() { return g.guiWidth(); }

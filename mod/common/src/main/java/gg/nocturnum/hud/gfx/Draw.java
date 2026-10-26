@@ -107,6 +107,10 @@ public final class Draw {
         }
     }
 
+    public static void centeredBold(Gfx g, String s, float cx, int y, int color, boolean shadow) {
+        g.textBold(s, Math.round(cx - g.textBoldW(s) / 2f), y, color, shadow);
+    }
+
     public static void centeredText(Gfx g, String s, float cx, int y, int color, boolean shadow) {
         g.text(s, Math.round(cx - g.textW(s) / 2f), y, color, shadow);
     }

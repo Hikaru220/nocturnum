@@ -10,8 +10,6 @@ import gg.nocturnum.hud.gfx.Gfx;
 import gg.nocturnum.hud.platform.Platform;
 import gg.nocturnum.hud.util.Colors;
 import gg.nocturnum.hud.util.Lang;
-import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -62,7 +60,7 @@ public final class ExtraModules {
 
         @Override
         public void overlay(Gfx g, float pt) {
-            if (Game.mc().screen != null || Game.mc().options.getCameraType().isFirstPerson() == false) return;
+            if (Platform.screenOpen() || Game.mc().options.getCameraType().isFirstPerson() == false) return;
             float cx = g.w() / 2f, cy = g.h() / 2f;
             float grow = expand.get() ? Math.max(0, 1f - (System.currentTimeMillis() - attackAt) / 250f) * 3f : 0;
             int c = color.argb();
@@ -111,13 +109,13 @@ public final class ExtraModules {
 
         public Zoom() {
             super("zoom", Category.CAMERA, true, false, 0, 0);
-            keybind.set(GLFW.GLFW_KEY_C);
+            keybind.set(67);
             keybind.hold = true;
         }
 
         /** Divisor applied to the field of view, 1 = no zoom. Called from the FOV mixin. */
         public float divisor() {
-            boolean active = Platform.isKeyDown(keybind.get()) && Game.mc().screen == null;
+            boolean active = Platform.isKeyDown(keybind.get()) && !Platform.screenOpen();
             float target = active ? factor.get() : 1f;
             current = smooth.get() ? current + (target - current) * 0.2f : target;
             if (Math.abs(current - target) < 0.01f) current = target;
@@ -148,7 +146,7 @@ public final class ExtraModules {
         @Override
         public void onTick() {
             var mc = Game.mc();
-            if (!Game.inWorld() || mc.screen != null) return;
+            if (!Game.inWorld() || Platform.screenOpen()) return;
             var o = mc.options;
             if (o.keyUp.isDown()) o.keySprint.setDown(true);
             if (sneakToggle.get()) {
@@ -179,7 +177,7 @@ public final class ExtraModules {
                 if (!reported) {
                     reported = true;
                     String where = Game.streamer() ? "???" : String.format("%d / %d / %d", p.getBlockX(), p.getBlockY(), p.getBlockZ());
-                    p.displayClientMessage(Component.literal("[Nocturnum] " + Lang.t("comfort.died") + ": " + where), false);
+                    Platform.chat("[Nocturnum] " + Lang.t("comfort.died") + ": " + where);
                 }
             } else {
                 reported = false;

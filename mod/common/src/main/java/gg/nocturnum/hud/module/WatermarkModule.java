@@ -75,8 +75,8 @@ public final class WatermarkModule extends Module {
                 g.fill(x - SEP / 2, 5, x - SEP / 2 + 1, h - 5, Colors.withAlpha(0xFFFFFF, 40));
             }
             int col = i == 0 ? Theme.gradient(0f) : Theme.TEXT;
-            g.text(p.get(i), x, ty, col, true);
-            x += g.textW(p.get(i)) + SEP;
+            if (i == 0) g.textBold(p.get(i), x, ty, col, true); else g.text(p.get(i), x, ty, col, true);
+            x += (i == 0 ? g.textBoldW(p.get(i)) : g.textW(p.get(i))) + SEP;
         }
     }
 }

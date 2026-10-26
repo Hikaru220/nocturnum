@@ -76,7 +76,7 @@ public final class Hud {
                 }
             }
         }
-        if (inGame && Game.mc().screen == null) {
+        if (inGame && !Platform.screenOpen()) {
             for (Module m : Config.modules()) {
                 int k = m.keybind.get();
                 if (k < 0 || m instanceof ClickGuiModule) continue;
@@ -93,14 +93,14 @@ public final class Hud {
         ClickGuiModule cg = Config.get(ClickGuiModule.class);
         int mk = cg.keybind.get();
         boolean down = mk >= 0 && Platform.isKeyDown(mk);
-        if (down && !menuKeyDown && Game.mc().screen == null && inGame) Platform.openView(new ClickGuiView());
+        if (down && !menuKeyDown && !Platform.screenOpen() && inGame) Platform.openView(new ClickGuiView());
         menuKeyDown = down;
         Config.tick();
     }
 
     /** Draws all HUD elements. Called from the platform's HUD callback. */
     public static void render(Gfx g, float partial) {
-        if (!started || Game.mc().options.hideGui) return;
+        if (!started) return;
         for (Module m : Config.modules()) {
             if (!m.hud) {
                 if (m.enabled()) {
