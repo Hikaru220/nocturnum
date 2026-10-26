@@ -288,3 +288,14 @@ def camera(a, mod, st, opt, scale):
     st("screenshots", "copyKey", "Скопировать картинку", "Copy image")
     st("screenshots", "folderKey", "Открыть папку", "Open folder")
     st("screenshots", "autoCopy", "Автокопирование", "Auto copy")
+
+
+def post(a, mod, st, opt, scale):
+    a("post.shaderConflict", "Конфликт с шейдером: эффект выключен", "Shader conflict: effect disabled")
+    mod("colorgrade", "Насыщенность цветов", "Colour grade", "Делает картинку ярче или бледнее: насыщенность, контраст, теплота", "Makes the picture brighter or paler: saturation, contrast, warmth")
+    st("colorgrade", "saturation", "Насыщенность", "Saturation")
+    st("colorgrade", "contrast", "Контраст", "Contrast")
+    st("colorgrade", "warmth", "Теплота", "Warmth", "Минус — холоднее, плюс — теплее", "Negative is colder, positive is warmer")
+    mod("motionblur", "Motion Blur", "Motion Blur", "Размытие в движении: плавная, киношная картинка", "Motion blur for a smooth, cinematic picture")
+    st("motionblur", "strength", "Сила", "Strength")
+    st("motionblur", "onlyTurning", "Только при повороте камеры", "Only when turning")

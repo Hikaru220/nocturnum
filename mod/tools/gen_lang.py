@@ -274,6 +274,7 @@ lang_pack.view(a, mod, st, opt, scale)
 lang_pack.social(a, mod, st, opt, scale)
 lang_pack.labels(a, mod, st, opt, scale)
 lang_pack.camera(a, mod, st, opt, scale)
+lang_pack.post(a, mod, st, opt, scale)
 
 
 def write(root):

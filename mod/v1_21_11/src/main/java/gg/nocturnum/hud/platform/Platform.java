@@ -208,6 +208,31 @@ public final class Platform {
         Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.values()[ordinal]);
     }
 
+    /** True while an Iris shader pack is rendering (our post effects would fight with it). */
+    public static boolean shaderPackActive() {
+        try {
+            Class<?> api = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
+            Object inst = api.getMethod("getInstance").invoke(null);
+            return (Boolean) api.getMethod("isShaderPackInUse").invoke(inst);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** Applies our post-processing chain(s). This version has one slot: motion blur wins over the colour grade. */
+    public static void setPostEffects(java.util.List<String> ids) {
+        var gr = Minecraft.getInstance().gameRenderer;
+        var acc = (gg.nocturnum.hud.mixin.GameRendererPostAccess) gr;
+        var current = acc.nocturnum$postEffectId();
+        if (current != null && !current.getNamespace().equals("nocturnum")) return; // vanilla spectator effect owns the slot
+        if (ids.isEmpty()) {
+            if (current != null) gr.clearPostEffect();
+            return;
+        }
+        var want = net.minecraft.resources.Identifier.parse(ids.get(ids.size() - 1));
+        if (!want.equals(current)) acc.nocturnum$setPostEffect(want);
+    }
+
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(c -> Hud.tick());
         HudElementRegistry.attachElementAfter(VanillaHudElements.SUBTITLES, Identifier.fromNamespaceAndPath("nocturnum", "hud"),

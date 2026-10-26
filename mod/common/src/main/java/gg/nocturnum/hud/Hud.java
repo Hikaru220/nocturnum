@@ -82,6 +82,20 @@ public final class Hud {
             for (String id : new String[]{"scoreboard", "tabeditor", "enhancedchat", "screenshots"}) Config.byId(id).setEnabled(true);
             Platform.chat("test message");
         }
+        if (d.contains("fx3") && world && Game.inWorld() && debugTicks == open - 100) {
+            var cg = (gg.nocturnum.hud.module.PostModules.ColorGrade) Config.byId("colorgrade");
+            cg.saturation.set(0f);
+            cg.setEnabled(true);
+        }
+        if (d.contains("fx4") && world && Game.inWorld()) {
+            if (debugTicks == open - 100) {
+                var mb = (gg.nocturnum.hud.module.PostModules.MotionBlur) Config.byId("motionblur");
+                mb.strength.set(90f);
+                mb.onlyTurning.set(false);
+                mb.setEnabled(true);
+            }
+            if (debugTicks > open - 90 && debugTicks <= open + 58) Game.player().setYRot(Game.player().getYRot() + 6f);
+        }
         if (debugTicks == open + 60 && d.contains("shot")) Platform.debugShot();
         if (d.contains("loadshot") && (debugTicks == 2 || debugTicks == 12 || debugTicks == 25)) Platform.debugShot();
     }
@@ -122,6 +136,7 @@ public final class Hud {
         if (Platform.titleScreenOpen() && Config.get(gg.nocturnum.hud.module.MainMenuModule.class).active()) Platform.openView(new gg.nocturnum.hud.ui.MainMenuView());
         Config.tick();
         AnarchyProfiles.tick();
+        gg.nocturnum.hud.module.PostModules.tick();
         Config.get(PackModules.Boost.class).watch();
     }
 

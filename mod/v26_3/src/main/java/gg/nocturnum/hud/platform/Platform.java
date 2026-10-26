@@ -207,6 +207,20 @@ public final class Platform {
         Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.values()[ordinal]);
     }
 
+    /** True while an Iris shader pack is rendering (our post effects would fight with it). */
+    public static boolean shaderPackActive() {
+        try {
+            Class<?> api = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
+            Object inst = api.getMethod("getInstance").invoke(null);
+            return (Boolean) api.getMethod("isShaderPackInUse").invoke(inst);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** The 26.3 renderer pulls the active ids from PostModules itself (see GameRendererMixin). */
+    public static void setPostEffects(java.util.List<String> ids) {}
+
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(c -> Hud.tick());
         HudElementRegistry.attachElementAfter(VanillaHudElements.SUBTITLES, Identifier.fromNamespaceAndPath("nocturnum", "hud"),

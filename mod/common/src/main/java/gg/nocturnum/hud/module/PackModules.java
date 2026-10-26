@@ -44,6 +44,7 @@ public final class PackModules {
         LabelModules.registerAll();
         CameraModules.registerAll();
         ComfortModules.registerAll();
+        PostModules.registerAll();
     }
 
     /** Called on every client-side attack (from the platform event). */
