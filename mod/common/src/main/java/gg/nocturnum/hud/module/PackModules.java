@@ -39,6 +39,8 @@ public final class PackModules {
         Config.register(new Fullbright());
         AnarchyModules.registerAll();
         SoundModules.registerAll();
+        ViewTweaks.registerAll();
+        SocialModules.registerAll();
     }
 
     /** Called on every client-side attack (from the platform event). */

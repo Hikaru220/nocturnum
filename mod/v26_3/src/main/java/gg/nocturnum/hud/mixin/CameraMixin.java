@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class CameraMixin {
     @Inject(method = "calculateFov", at = @At("RETURN"), cancellable = true)
     private void nocturnum$zoom(float partial, CallbackInfoReturnable<Float> cir) {
+        cir.setReturnValue(Config.get(gg.nocturnum.hud.module.ViewTweaks.FovStates.class).adjust(cir.getReturnValue(), gg.nocturnum.hud.platform.Platform.optionFov()));
         ExtraModules.Zoom z = Config.get(ExtraModules.Zoom.class);
         if (z.enabled()) {
             float d = z.divisor();

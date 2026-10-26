@@ -270,6 +270,8 @@ lang_pack.fx(a, mod, st, opt, scale)
 lang_pack.media(a, mod, st, opt, scale)
 lang_pack.anarchy(a, mod, st, opt, scale)
 lang_pack.sounds(a, mod, st, opt, scale)
+lang_pack.view(a, mod, st, opt, scale)
+lang_pack.social(a, mod, st, opt, scale)
 
 
 def write(root):

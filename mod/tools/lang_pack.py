@@ -204,3 +204,39 @@ def sounds(a, mod, st, opt, scale):
         for o, oru, oen in [("classic", "Классика", "Classic"), ("click", "Щелчок", "Click"), ("bell", "Колокол", "Bell"), ("bass", "Бас", "Bass"), ("silence", "Тишина", "Silence")]:
             opt(m, "set", o, oru, oen)
         st(m, "volume", "Громкость", "Volume")
+
+
+def view(a, mod, st, opt, scale):
+    mod("fovstates", "FOV при беге", "Sprint FOV", "Свой угол обзора при беге, замедлении и полёте вместо ванильного рывка", "Own field of view for sprinting, slowness and flying instead of the vanilla dash")
+    st("fovstates", "mode", "Режим", "Mode")
+    opt("fovstates", "mode", "vanilla", "Ванильный", "Vanilla")
+    opt("fovstates", "mode", "none", "Без изменения FOV", "No FOV change")
+    opt("fovstates", "mode", "custom", "Свой", "Custom")
+    st("fovstates", "sprint", "FOV при беге", "Sprint FOV")
+    st("fovstates", "slow", "FOV при замедлении", "Slowness FOV")
+    st("fovstates", "fly", "FOV в полёте", "Flying FOV")
+    st("fovstates", "smooth", "Плавность", "Smoothness")
+    mod("nohurtshake", "Без тряски при уроне", "No hurt shake", "Убирает или уменьшает дёргание экрана, когда тебя ударили", "Removes or reduces the screen shake when you are hit")
+    st("nohurtshake", "strength", "Сила тряски", "Shake strength")
+    mod("lowfire", "Низкий огонь", "Low fire", "Опускает огонь на экране при горении, чтобы он не закрывал обзор", "Lowers the fire overlay so it does not block your view")
+    st("lowfire", "height", "Высота огня", "Fire height")
+
+
+def social(a, mod, st, opt, scale):
+    a("waypoint.death", "Место смерти", "Death point")
+    a("waypoint.name", "Метка {0}", "Waypoint {0}")
+    a("waypoint.added", "Метка сохранена", "Waypoint saved")
+    a("waypoint.removed", "Ближайшая метка удалена", "Nearest waypoint removed")
+    a("friends.added", "{0} добавлен в друзья", "{0} added to friends")
+    a("friends.removed", "Игрок убран из друзей", "Player removed from friends")
+    mod("waypoints", "Метки", "Waypoints", "Сохраняет точки (база, ферма, место смерти) и показывает их на экране с расстоянием", "Saves points (base, farm, death place) and shows them on screen with the distance")
+    st("waypoints", "addKey", "Добавить метку здесь", "Add waypoint here")
+    st("waypoints", "removeKey", "Удалить ближайшую", "Remove nearest", "Удаляет метку в радиусе 5 блоков", "Removes a waypoint within 5 blocks")
+    st("waypoints", "hideKey", "Скрыть / показать все", "Hide / show all")
+    st("waypoints", "deathPoint", "Метка смерти", "Death waypoint")
+    st("waypoints", "color", "Цвет", "Colour")
+    st("waypoints", "maxDistance", "Макс. расстояние", "Max distance", "0 — без ограничения", "0 = unlimited")
+    mod("friends", "Друзья", "Friends", "Отмечает ромбом друзей из твоего списка — только тех, кого ты и так видишь", "Marks friends from your list with a diamond; only players you already see")
+    st("friends", "addKey", "Добавить / убрать друга", "Add / remove friend", "Наведи прицел на игрока и нажми клавишу", "Aim at a player and press the key")
+    st("friends", "color", "Цвет", "Colour")
+    st("friends", "sound", "Звук", "Sound")

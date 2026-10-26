@@ -194,6 +194,8 @@ public final class Platform {
         }
     }
 
+    public static float optionFov() { return Minecraft.getInstance().options.fov().get(); }
+
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(c -> Hud.tick());
         HudElementRegistry.attachElementAfter(VanillaHudElements.SUBTITLES, Identifier.fromNamespaceAndPath("nocturnum", "hud"),
