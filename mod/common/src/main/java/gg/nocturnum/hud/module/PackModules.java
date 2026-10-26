@@ -41,6 +41,7 @@ public final class PackModules {
         SoundModules.registerAll();
         ViewTweaks.registerAll();
         SocialModules.registerAll();
+        LabelModules.registerAll();
     }
 
     /** Called on every client-side attack (from the platform event). */

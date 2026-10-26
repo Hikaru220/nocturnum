@@ -240,3 +240,10 @@ def social(a, mod, st, opt, scale):
     st("friends", "addKey", "Добавить / убрать друга", "Add / remove friend", "Наведи прицел на игрока и нажми клавишу", "Aim at a player and press the key")
     st("friends", "color", "Цвет", "Colour")
     st("friends", "sound", "Звук", "Sound")
+
+
+def labels(a, mod, st, opt, scale):
+    mod("tnttimer", "TNT Timer", "TNT Timer", "Таймер над подожжённым динамитом — сколько секунд до взрыва", "A timer above lit TNT: seconds until it explodes")
+    st("tnttimer", "warnColor", "Красный в конце", "Red at the end")
+    mod("selfnametag", "SelfNameTag", "SelfNameTag", "Показывает твой ник над головой в виде от третьего лица", "Shows your own name above your head in third person")
+    st("selfnametag", "background", "Фон", "Background")
