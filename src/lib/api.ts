@@ -29,6 +29,9 @@ export interface Settings {
   reduceMotion: boolean;
   msClientId: string;
   discordAppId: string;
+  perfTier: "auto" | "low" | "mid" | "high";
+  installOptimization: boolean;
+  highPriority: boolean;
 }
 
 export interface Instance {
@@ -160,6 +163,7 @@ export const api = {
   getSettings: () => invoke<Settings>("get_settings"),
   saveSettings: (settings: Settings) => invoke<void>("save_settings", { settings }),
   systemInfo: () => invoke<SystemInfo>("system_info"),
+  hardwareInfo: () => invoke<{ gpu: string; cpuThreads: number; ramMb: number; tier: string; integratedGpu: boolean }>("hardware_info"),
   setRootDir: (path: string, moveData: boolean) => invoke<void>("set_root_dir", { path, moveData }),
   launcherLog: () => invoke<string>("get_launcher_log"),
   openPath: (path: string) => invoke<void>("open_path", { path }),

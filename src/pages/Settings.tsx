@@ -16,6 +16,10 @@ export default function Settings() {
   const [javaMsg, setJavaMsg] = useState("");
   const [moveData, setMoveData] = useState(true);
   const [log, setLog] = useState("");
+  const [hw, setHw] = useState<{ gpu: string; ramMb: number; tier: string } | null>(null);
+  useEffect(() => {
+    api.hardwareInfo().then(setHw).catch(() => {});
+  }, []);
   useEffect(() => {
     if (sec === "java" && javas === null) api.detectJava().then(setJavas).catch(() => setJavas([]));
     if (sec === "about") api.launcherLog().then(setLog).catch(() => {});
@@ -77,6 +81,17 @@ export default function Settings() {
             {row(t("set.preset"), s.applyPreset, (v) => patch({ applyPreset: v }), t("set.presetHint"))}
             {row(t("set.sodium"), s.installSodium, (v) => patch({ installSodium: v }), t("set.sodiumHint"))}
             {row(t("set.hud"), s.installHud, (v) => patch({ installHud: v }))}
+            {row(t("set.opt"), s.installOptimization, (v) => patch({ installOptimization: v }), t("set.optHint"))}
+            {row(t("set.priority"), s.highPriority, (v) => patch({ highPriority: v }))}
+            <Field label={t("set.tier")} hint={hw ? t("set.detected", { gpu: hw.gpu || "—", gb: (hw.ramMb / 1024).toFixed(0), tier: t((`set.tier.${hw.tier}`) as never) }) : t("set.tierHint")} row>
+              <Select value={s.perfTier} onChange={(e) => patch({ perfTier: e.target.value as never })} className="!w-44">
+                {(["auto", "low", "mid", "high"] as const).map((k) => (
+                  <option key={k} value={k}>
+                    {t(`set.tier.${k}` as never)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
             {row(t("set.minimize"), s.minimizeOnLaunch, (v) => patch({ minimizeOnLaunch: v }))}
           </>
         )}

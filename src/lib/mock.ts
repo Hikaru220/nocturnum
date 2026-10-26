@@ -12,7 +12,7 @@ export function installMock() {
     windowWidth: 854, windowHeight: 480, fullscreen: false, discreteGpu: false, discordRpc: true, rpcHideServer: false,
     rpcHideInstance: false, applyPreset: true, installSodium: true, installHud: true, minimizeOnLaunch: true,
     downloadsThreads: 12, firstRunDone: true, lastInstance: "survival", lastAccount: "a1", background: "", reduceMotion: false,
-    msClientId: "", discordAppId: "",
+    msClientId: "", discordAppId: "", perfTier: "auto", installOptimization: true, highPriority: true,
   };
   const mk = (id: string, name: string, mc: string, loader: string, extra: any = {}) => ({
     id, name, mcVersion: mc, loader, loaderVersion: "0.20.1", versionId: "", installed: true, ramMb: 0, javaPath: "", jvmArgs: "",
@@ -33,6 +33,7 @@ export function installMock() {
     get_settings: () => settings,
     save_settings: () => null,
     system_info: () => ({ totalRamMb: 16384, os: "windows", portable: false, root_dir: "C:\\Users\\you\\AppData\\Roaming\\Nocturnum", rootDir: "C:\\Users\\you\\AppData\\Roaming\\Nocturnum", version: "0.1.0", cpuThreads: 12 }),
+    hardware_info: () => ({ gpu: "NVIDIA GeForce RTX 3060", cpuThreads: 12, ramMb: 16384, tier: "high", integratedGpu: false }),
     list_instances: () => instances,
     list_accounts: () => accounts,
     running_instances: () => [],
