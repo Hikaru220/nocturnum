@@ -64,6 +64,7 @@ public final class ClickGuiView extends View {
     private Module listeningModule;
     private Setting.Num editNum;
     private Setting.Color editHex;
+    private Setting.Text editTxt;
     private final StringBuilder editBuf = new StringBuilder();
     private Setting.Color pickerOpen;
     private boolean profilesOpen;
@@ -219,6 +220,11 @@ public final class ClickGuiView extends View {
             }
             editNum = null;
         }
+        if (editTxt != null) {
+            pushUndo(editTxt);
+            editTxt.set(editBuf.toString());
+            editTxt = null;
+        }
         if (editHex != null) {
             int c = Colors.parseHex(editBuf.toString(), 0);
             if (c != 0) {
@@ -229,7 +235,7 @@ public final class ClickGuiView extends View {
         }
     }
 
-    private boolean editing() { return editNum != null || editHex != null || searchFocus || profileNameFocus; }
+    private boolean editing() { return editNum != null || editHex != null || editTxt != null || searchFocus || profileNameFocus; }
 
     private void startClose() {
         if (closing) return;
@@ -621,6 +627,25 @@ public final class ClickGuiView extends View {
                 };
             }));
             if (pickerOpen == cl) rows.add(colorPicker(cl));
+        } else if (s instanceof Setting.Text tx) {
+            rows.add(new Row(15, (gg, x, y, w) -> {
+                gg.text(label, Math.round(x) + 7, Math.round(y) + 3, Theme.TEXT, false);
+                boolean ed = editTxt == tx;
+                String shown = ed ? editBuf + "|" : (tx.get().isEmpty() ? "—" : tx.get());
+                int maxW = 62;
+                while (gg.textW(shown) > maxW && shown.length() > 1) shown = shown.substring(ed ? 1 : 0, ed ? shown.length() : shown.length() - 1);
+                int cw = Math.max(26, gg.textW(shown) + 10);
+                boolean hv = ui.hover(x + w - cw - 6, y + 1, cw, 13);
+                Ui.chip(gg, shown, x + w - cw - 6, y + 1, cw, 13, ed, hv);
+                Ui.Hit h = ui.region(x, y, w, 15);
+                if (ui.hover(x, y, w, 15)) ui.tooltip = tip;
+                h.press = (bt, mx, my) -> {
+                    commitEdit();
+                    editTxt = tx;
+                    editBuf.setLength(0);
+                    editBuf.append(tx.get());
+                };
+            }));
         } else if (s instanceof Setting.Key kb) {
             rows.add(new Row(15, (gg, x, y, w) -> {
                 gg.text(label, Math.round(x) + 7, Math.round(y) + 3, Theme.TEXT, false);
@@ -850,7 +875,7 @@ public final class ClickGuiView extends View {
         double vx = x / uiScale, vy = y / uiScale;
         if (closing) return true;
         boolean wasEditing = editing();
-        if (editNum != null || editHex != null) {
+        if (editNum != null || editHex != null || editTxt != null) {
             // click elsewhere commits; a click on the same field restarts it via the region handler
             commitEdit();
         }
@@ -909,9 +934,10 @@ public final class ClickGuiView extends View {
             return true;
         }
         if (key == 256) { // Esc
-            if (editNum != null || editHex != null) {
+            if (editNum != null || editHex != null || editTxt != null) {
                 editNum = null;
                 editHex = null;
+                editTxt = null;
             } else if (profilesOpen) {
                 profilesOpen = false;
             } else if (!search.isEmpty() || searchFocus) {
@@ -929,7 +955,7 @@ public final class ClickGuiView extends View {
             return true;
         }
         if (key == 259) { // Backspace
-            if (editNum != null || editHex != null) {
+            if (editNum != null || editHex != null || editTxt != null) {
                 if (editBuf.length() > 0) editBuf.setLength(editBuf.length() - 1);
             } else if (profileNameFocus) {
                 if (!profileName.isEmpty()) profileName = profileName.substring(0, profileName.length() - 1);
@@ -961,6 +987,8 @@ public final class ClickGuiView extends View {
         String s = new String(Character.toChars(cp));
         if (editNum != null) {
             if ("0123456789.,-".contains(s)) editBuf.append(s);
+        } else if (editTxt != null) {
+            if (editBuf.length() < editTxt.maxLen) editBuf.append(s);
         } else if (editHex != null) {
             if ("0123456789abcdefABCDEF#".contains(s) && editBuf.length() < 9) editBuf.append(s);
         } else if (profileNameFocus) {

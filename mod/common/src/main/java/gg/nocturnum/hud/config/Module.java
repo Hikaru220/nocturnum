@@ -71,11 +71,15 @@ public abstract class Module {
 
     public void setEnabled(boolean v) {
         if (enabled == v) return;
+        if (v && !canEnable()) return;
         enabled = v;
         Config.markDirty();
         if (v) onEnable(); else onDisable();
         gg.nocturnum.hud.ui.Notifications.moduleToggled(this, v);
     }
+
+    /** Hook for gated modules (Anarchy category): return false to refuse enabling. */
+    public boolean canEnable() { return true; }
 
     public void toggle() { setEnabled(!enabled); }
     public boolean enabledByDefault() { return defaultEnabled; }

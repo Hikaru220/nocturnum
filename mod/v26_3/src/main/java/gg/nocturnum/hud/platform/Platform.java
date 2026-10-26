@@ -63,6 +63,56 @@ public final class Platform {
     /** Not available on this version (world creation API differs); tests use the title screen. */
     public static void debugCreateWorld() {}
 
+    public static boolean windowActive() { return Minecraft.getInstance().isWindowActive(); }
+
+    public static int fpsLimit() { return Minecraft.getInstance().options.framerateLimit().get(); }
+
+    public static void setFpsLimit(int v) { Minecraft.getInstance().options.framerateLimit().set(v); }
+
+    public static double gamma() { return Minecraft.getInstance().options.gamma().get(); }
+
+    public static void setGamma(double v) { Minecraft.getInstance().options.gamma().set(Math.max(0, Math.min(1, v))); }
+
+    /** Sends text as the player: commands start with a slash, everything else is a chat message. */
+    public static void sendChat(String text) {
+        var conn = Minecraft.getInstance().getConnection();
+        if (conn == null) return;
+        if (text.startsWith("/")) conn.sendCommand(text.substring(1)); else conn.sendChat(text);
+    }
+
+    /** Local night-vision effect without an icon (client side only). */
+    public static void nightVision(boolean on) {
+        var p = Minecraft.getInstance().player;
+        if (p == null) return;
+        var nv = net.minecraft.world.effect.MobEffects.NIGHT_VISION;
+        if (on) {
+            var cur = p.getEffect(nv);
+            if (cur == null || cur.getDuration() < 220) p.addEffect(new net.minecraft.world.effect.MobEffectInstance(nv, 400, 0, false, false, false));
+        } else if (p.hasEffect(nv)) {
+            p.removeEffect(nv);
+        }
+    }
+
+    private static int[] boostSaved;
+
+    /** Boost mode: cut particles, shadows, clouds and distance; restore the previous values on exit. */
+    public static void boost(boolean on) {
+        var o = Minecraft.getInstance().options;
+        if (on) {
+            boostSaved = new int[]{o.particles().get().ordinal(), o.cloudStatus().get().ordinal(), o.entityShadows().get() ? 1 : 0, o.renderDistance().get()};
+            o.particles().set(net.minecraft.server.level.ParticleStatus.MINIMAL);
+            o.cloudStatus().set(net.minecraft.client.CloudStatus.OFF);
+            o.entityShadows().set(false);
+            o.renderDistance().set(Math.min(o.renderDistance().get(), 8));
+        } else if (boostSaved != null) {
+            o.particles().set(net.minecraft.server.level.ParticleStatus.values()[boostSaved[0]]);
+            o.cloudStatus().set(net.minecraft.client.CloudStatus.values()[boostSaved[1]]);
+            o.entityShadows().set(boostSaved[2] == 1);
+            o.renderDistance().set(boostSaved[3]);
+            boostSaved = null;
+        }
+    }
+
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(c -> Hud.tick());
         HudElementRegistry.attachElementAfter(VanillaHudElements.SUBTITLES, Identifier.fromNamespaceAndPath("nocturnum", "hud"),
@@ -72,7 +122,7 @@ public final class Platform {
             if (!Config.get(gg.nocturnum.hud.module.ExtraModules.Crosshair.class).enabled()) original.extractRenderState(graphics, tracker);
         });
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
-            if (world.isClientSide()) Config.get(TargetHudModule.class).onAttack(entity);
+            if (world.isClientSide()) gg.nocturnum.hud.module.PackModules.onAttack(entity);
             return InteractionResult.PASS;
         });
         Game.mc();

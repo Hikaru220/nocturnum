@@ -154,4 +154,17 @@ public abstract class Setting<T> {
             hold = o.has("hold") && o.get("hold").getAsBoolean();
         }
     }
+
+    /** Free text (command bind text, waypoint names). */
+    public static final class Text extends Setting<String> {
+        public final int maxLen;
+
+        public Text(String id, String def, int maxLen) {
+            super(id, def);
+            this.maxLen = maxLen;
+        }
+
+        public JsonElement save() { return new JsonPrimitive(value); }
+        public void load(JsonElement e) { value = e.getAsString(); }
+    }
 }

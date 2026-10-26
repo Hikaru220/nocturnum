@@ -25,6 +25,7 @@ public final class ExtraModules {
         Config.register(new DeathCoords());
         Config.register(new DiscordRpc());
         Config.register(new LoadingScreenModule());
+        PackModules.registerAll();
         try {
             VisualModules.registerAll();
         } catch (NoClassDefFoundError ignored) {

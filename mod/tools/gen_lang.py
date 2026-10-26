@@ -263,6 +263,10 @@ for i, (ru, en) in enumerate([
     a(f"loading.tip.{i}", ru, en)
 
 
+import lang_pack
+lang_pack.pack(a, mod, st, opt, scale)
+
+
 def write(root):
     d = os.path.join(root, "assets", "nocturnum", "lang")
     os.makedirs(d, exist_ok=True)

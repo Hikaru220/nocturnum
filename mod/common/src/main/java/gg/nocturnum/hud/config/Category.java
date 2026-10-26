@@ -6,6 +6,7 @@ public enum Category {
     CAMERA("camera"),
     SOUNDS("sounds"),
     COMFORT("comfort"),
+    ANARCHY("anarchy"),
     OTHER("other");
 
     public final String id;

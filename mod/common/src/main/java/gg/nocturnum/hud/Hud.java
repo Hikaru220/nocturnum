@@ -79,7 +79,7 @@ public final class Hud {
         if (inGame && !Platform.screenOpen()) {
             for (Module m : Config.modules()) {
                 int k = m.keybind.get();
-                if (k < 0 || m instanceof ClickGuiModule) continue;
+                if (k < 0 || m instanceof ClickGuiModule || m instanceof ExtraModules.Zoom) continue;
                 boolean down = Platform.isKeyDown(k);
                 if (m.keybind.hold) {
                     m.setEnabled(down);
@@ -96,6 +96,8 @@ public final class Hud {
         if (down && !menuKeyDown && !Platform.screenOpen() && inGame) Platform.openView(new ClickGuiView());
         menuKeyDown = down;
         Config.tick();
+        AnarchyProfiles.tick();
+        Config.get(PackModules.Boost.class).watch();
     }
 
     /** Draws all HUD elements. Called from the platform's HUD callback. */
