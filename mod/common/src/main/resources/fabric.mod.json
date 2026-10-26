@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "nocturnum",
+  "version": "${version}",
+  "name": "Nocturnum HUD",
+  "description": "HUD, visual effects and menus for the Nocturnum Launcher. Client-only, no advantage features.",
+  "authors": ["Nocturnum contributors"],
+  "contact": {
+    "homepage": "https://github.com/Hikaru220/nocturnum",
+    "sources": "https://github.com/Hikaru220/nocturnum",
+    "issues": "https://github.com/Hikaru220/nocturnum/issues"
+  },
+  "license": "GPL-3.0-or-later",
+  "icon": "assets/nocturnum/icon.png",
+  "environment": "client",
+  "mixins": ["nocturnum.mixins.json", "nocturnum.platform.mixins.json"],
+  "entrypoints": {
+    "client": ["gg.nocturnum.hud.NocturnumClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "${mc}",
+    "java": "${java}",
+    "fabric-api": "*"
+  }
+}

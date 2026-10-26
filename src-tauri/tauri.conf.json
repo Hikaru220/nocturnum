@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Nocturnum Launcher",
+  "version": "0.1.0",
+  "identifier": "gg.nocturnum.launcher",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Nocturnum Launcher",
+        "width": 1180,
+        "height": 740,
+        "minWidth": 1000,
+        "minHeight": 650,
+        "center": true,
+        "decorations": true,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: blob: https://cdn.modrinth.com https://*.modrinth.com https://crafatar.com https://mc-heads.net https://minotar.net https://textures.minecraft.net; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost https://textures.minecraft.net https://crafatar.com https://minotar.net; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico", "icons/icon.png"],
+    "resources": ["resources/**/*"],
+    "publisher": "Nocturnum",
+    "copyright": "GPL-3.0-or-later",
+    "windows": {
+      "nsis": { "installMode": "currentUser", "languages": ["Russian", "English"] }
+    }
+  }
+}
