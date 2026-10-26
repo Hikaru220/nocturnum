@@ -76,6 +76,7 @@ public abstract class Module {
         Config.markDirty();
         if (v) onEnable(); else onDisable();
         gg.nocturnum.hud.ui.Notifications.moduleToggled(this, v);
+        if (gg.nocturnum.hud.Hud.ready() && !(this instanceof gg.nocturnum.hud.module.SoundModules.UiSounds)) gg.nocturnum.hud.module.SoundModules.UiSounds.toggled(v);
     }
 
     /** Hook for gated modules (Anarchy category): return false to refuse enabling. */

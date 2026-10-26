@@ -83,6 +83,7 @@ public final class ClickGuiView extends View {
     public ClickGuiView() {
         open.to(1, 220, Easing.OUT_CUBIC);
         loadLayout();
+        gg.nocturnum.hud.module.SoundModules.UiSounds.menuOpen();
     }
 
     @Override public boolean escapeCloses() { return false; }
@@ -240,6 +241,7 @@ public final class ClickGuiView extends View {
     private void startClose() {
         if (closing) return;
         closing = true;
+        gg.nocturnum.hud.module.SoundModules.UiSounds.menuClose();
         commitEdit();
         open.to(0, 150, Easing.IN_CUBIC);
     }

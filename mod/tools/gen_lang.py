@@ -268,6 +268,8 @@ lang_pack.pack(a, mod, st, opt, scale)
 lang_pack.menu(a, mod, st)
 lang_pack.fx(a, mod, st, opt, scale)
 lang_pack.media(a, mod, st, opt, scale)
+lang_pack.anarchy(a, mod, st, opt, scale)
+lang_pack.sounds(a, mod, st, opt, scale)
 
 
 def write(root):

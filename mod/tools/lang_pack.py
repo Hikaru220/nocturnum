@@ -150,3 +150,57 @@ def media(a, mod, st, opt, scale):
     st("mediaplayer", "prevKey", "Клавиша: назад", "Key: previous", "Горячая клавиша предыдущего трека", "Hotkey for the previous track")
     st("mediaplayer", "toggleKey", "Клавиша: пауза", "Key: pause", "Горячая клавиша паузы и воспроизведения", "Hotkey for pause / play")
     st("mediaplayer", "nextKey", "Клавиша: вперёд", "Key: next", "Горячая клавиша следующего трека", "Hotkey for the next track")
+
+
+def anarchy(a, mod, st, opt, scale):
+    mod("esp", "ESP", "ESP", "Подсвечивает игроков и мобов рамкой, в том числе за стенами", "Outlines players and mobs, also behind walls")
+    st("esp", "style", "Стиль", "Style")
+    opt("esp", "style", "frame2d", "2D-рамка", "2D frame")
+    opt("esp", "style", "box3d", "3D-рамка", "3D box")
+    for k, ru, en in [("players", "Игроки", "Players"), ("mobs", "Мобы", "Mobs"), ("animals", "Животные", "Animals"), ("items", "Предметы", "Items")]:
+        st("esp", k, ru, en)
+    for k, ru, en in [("playerColor", "Цвет игроков", "Player colour"), ("mobColor", "Цвет мобов", "Mob colour"), ("animalColor", "Цвет животных", "Animal colour"), ("itemColor", "Цвет предметов", "Item colour")]:
+        st("esp", k, ru, en)
+    st("esp", "range", "Дальность", "Range")
+    st("esp", "thickness", "Толщина", "Thickness")
+    mod("targetesp", "Target ESP", "Target ESP", "Выделяет игрока, которого ты бьёшь: вращающийся круг или маркер над ним", "Marks the player you hit: a rotating ring or a marker above")
+    st("targetesp", "marker", "Маркер", "Marker")
+    opt("targetesp", "marker", "ring", "Кольцо", "Ring")
+    opt("targetesp", "marker", "diamond", "Ромб", "Diamond")
+    opt("targetesp", "marker", "glow", "Свечение", "Glow")
+    st("targetesp", "color", "Цвет", "Colour")
+    st("targetesp", "speed", "Скорость вращения", "Spin speed")
+    st("targetesp", "hold", "Время после удара", "Time after hit")
+    mod("hitboxes", "Хитбоксы", "Hitboxes", "Рисует хитбоксы существ; цвет меняется от зелёного к красному по здоровью", "Draws entity hitboxes; colour runs from green to red with health")
+    st("hitboxes", "onlyPlayers", "Только игроки", "Players only")
+    st("hitboxes", "thickness", "Толщина линий", "Line thickness")
+    st("hitboxes", "lookLine", "Линия взгляда", "Look line")
+    st("hitboxes", "range", "Дальность", "Range")
+    mod("minimap", "Миникарта", "Minimap", "Карта местности вокруг с точками игроков и мобов", "A map of the terrain around you with dots for players and mobs")
+    scale("minimap")
+    st("minimap", "shape", "Форма", "Shape")
+    opt("minimap", "shape", "square", "Квадратная", "Square")
+    opt("minimap", "shape", "round", "Круглая", "Round")
+    st("minimap", "radius", "Радиус", "Radius")
+    st("minimap", "size", "Размер", "Size")
+    st("minimap", "showPlayers", "Игроки", "Players")
+    st("minimap", "showMobs", "Мобы", "Mobs")
+    st("minimap", "showAnimals", "Животные", "Animals")
+    st("minimap", "names", "Ники", "Names")
+    st("minimap", "followLook", "По взгляду", "Follow look", "Карта вращается по направлению взгляда, иначе север сверху", "The map rotates with your view; otherwise north is up")
+
+
+def sounds(a, mod, st, opt, scale):
+    mod("uisounds", "Звуки интерфейса", "UI sounds", "Короткие звуки меню: открытие, переключатели, уведомления", "Short menu sounds: open, switches, notifications")
+    st("uisounds", "volume", "Громкость", "Volume")
+    st("uisounds", "menu", "Открытие и закрытие меню", "Menu open / close")
+    st("uisounds", "toggle", "Переключатели", "Switches", "Два разных щелчка: включение выше, выключение ниже", "Two clicks: on is higher, off is lower")
+    st("uisounds", "notify", "Уведомления", "Notifications")
+    st("uisounds", "hover", "Наведение", "Hover", "Очень тихий тик при наведении, по умолчанию выключен", "A very quiet tick on hover, off by default")
+    for m, ru, en, dru, den in [("hitsound", "Звук попадания", "Hit sound", "Звук, когда ты бьёшь игрока или моба", "A sound when you hit a player or mob"),
+                                ("killsound", "Звук убийства", "Kill sound", "Звук, когда противник погиб от твоего удара", "A sound when the enemy dies from your hit")]:
+        mod(m, ru, en, dru, den)
+        st(m, "set", "Набор", "Set")
+        for o, oru, oen in [("classic", "Классика", "Classic"), ("click", "Щелчок", "Click"), ("bell", "Колокол", "Bell"), ("bass", "Бас", "Bass"), ("silence", "Тишина", "Silence")]:
+            opt(m, "set", o, oru, oen)
+        st(m, "volume", "Громкость", "Volume")

@@ -47,6 +47,7 @@ public final class Notifications {
             if (NOTES.size() > 6) NOTES.remove(0);
             NOTES.add(new Note(title, text, color, (long) (m.duration.get() * 1000)));
         }
+        if (m.sound.get()) gg.nocturnum.hud.module.SoundModules.UiSounds.notification();
     }
 
     public static void moduleToggled(Module mod, boolean on) {

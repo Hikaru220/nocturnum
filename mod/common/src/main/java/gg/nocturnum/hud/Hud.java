@@ -19,6 +19,8 @@ public final class Hud {
     private static boolean menuKeyDown;
     private static boolean started;
 
+    public static boolean ready() { return started; }
+
     public static void registerModules() {
         Config.register(new ClickGuiModule());
         // HUD
@@ -60,12 +62,12 @@ public final class Hud {
         }
         if (d.contains("fx") && world && Game.inWorld()) {
             if (debugTicks == open - 120) {
-                for (String id : new String[]{"jumpcircles", "chinahat", "trails", "blockoverlay", "hiteffects", "crosshair", "hitcolor"}) {
+                for (String id : new String[]{"jumpcircles", "chinahat", "trails", "blockoverlay", "hiteffects", "crosshair", "hitcolor", "esp", "hitboxes", "minimap"}) {
                     var m = Config.byId(id);
                     if (m != null) m.setEnabled(true);
                 }
-                Game.mc().options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
-                Game.player().setXRot(45);
+                Game.mc().options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+                Game.player().setXRot(8);
             }
             if (debugTicks > open - 100 && debugTicks < open - 30) Game.player().setDeltaMovement(0.12, Game.player().getDeltaMovement().y, 0.04);
             if (debugTicks == open - 70 || debugTicks == open - 40) Game.player().jumpFromGround();

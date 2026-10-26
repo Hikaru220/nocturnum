@@ -37,6 +37,8 @@ public final class PackModules {
         Config.register(new BackgroundFps());
         Config.register(new Boost());
         Config.register(new Fullbright());
+        AnarchyModules.registerAll();
+        SoundModules.registerAll();
     }
 
     /** Called on every client-side attack (from the platform event). */
@@ -45,6 +47,8 @@ public final class PackModules {
         Config.get(PackHud.Combo.class).onAttack(e);
         Config.get(PackHud.Reach.class).onAttack(e);
         VisualModules.attack(e);
+        SoundModules.onAttack(e);
+        Config.get(AnarchyModules.TargetEsp.class).onAttack(e);
     }
 
     /** Sends a command or message on a key press, as if the player typed it. At most once per second per bind. */

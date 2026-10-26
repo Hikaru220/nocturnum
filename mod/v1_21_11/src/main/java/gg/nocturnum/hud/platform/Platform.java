@@ -185,6 +185,15 @@ public final class Platform {
         }
     }
 
+    /** Plays a UI sound at the given pitch and volume. */
+    public static void playUi(String soundId, float pitch, float volume) {
+        try {
+            var ev = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(net.minecraft.resources.Identifier.parse(soundId));
+            Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(ev, pitch, volume));
+        } catch (RuntimeException ignored) {
+        }
+    }
+
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(c -> Hud.tick());
         HudElementRegistry.attachElementAfter(VanillaHudElements.SUBTITLES, Identifier.fromNamespaceAndPath("nocturnum", "hud"),
