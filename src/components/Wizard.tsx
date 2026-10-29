@@ -7,7 +7,8 @@ import { DeviceCodeModal, PlayButton, useMicrosoftLogin } from "./shared";
 
 /** First-run wizard: sign in → create instance → play (ТЗ 5, 3 steps). */
 export default function Wizard() {
-  const { t, settings, patchSettings, accounts, refreshInstances, toast, instances } = useApp();
+  const { t, settings, patchSettings, accounts, refreshInstances, refreshAccounts, toast, instances } = useApp();
+  const [nick, setNick] = useState("");
   const acc = useApp((s) => s.currentAccount());
   const ms = useMicrosoftLogin();
   const [step, setStep] = useState(0);
@@ -94,6 +95,26 @@ export default function Wizard() {
                 </>
               )}
             </div>
+            {!acc && settings.allowOfflineUnlicensed && (
+              <div className="flex gap-2 pt-2">
+                <Input value={nick} maxLength={16} placeholder={t("acc.nick")} onChange={(e) => setNick(e.target.value)} />
+                <Button
+                  disabled={nick.length < 3}
+                  onClick={async () => {
+                    try {
+                      const a = await api.addOffline(nick);
+                      await refreshAccounts();
+                      await patchSettings({ lastAccount: a.id });
+                      setStep(1);
+                    } catch (e) {
+                      toast("error", errText(e));
+                    }
+                  }}
+                >
+                  {t("wiz.offline")}
+                </Button>
+              </div>
+            )}
           </div>
         )}
         {step === 1 && (

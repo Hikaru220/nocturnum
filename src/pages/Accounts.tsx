@@ -25,7 +25,7 @@ export default function Accounts() {
       toast("error", errText(e));
     }
   };
-  const hasMs = accounts.some((a) => a.kind === "microsoft");
+  const hasMs = accounts.some((a) => a.kind === "microsoft") || !!settings?.allowOfflineUnlicensed;
   const target = accounts.find((a) => a.id === removeId);
 
   return (

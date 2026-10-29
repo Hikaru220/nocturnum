@@ -12,7 +12,7 @@ export function installMock() {
     windowWidth: 854, windowHeight: 480, fullscreen: false, discreteGpu: false, discordRpc: true, rpcHideServer: false,
     rpcHideInstance: false, applyPreset: true, installSodium: true, installHud: true, minimizeOnLaunch: true,
     downloadsThreads: 12, firstRunDone: true, lastInstance: "survival", lastAccount: "a1", background: "", reduceMotion: false,
-    msClientId: "", discordAppId: "", perfTier: "auto", installOptimization: true, highPriority: true,
+    msClientId: "", discordAppId: "", perfTier: "auto", installOptimization: true, highPriority: true, allowOfflineUnlicensed: true,
   };
   const mk = (id: string, name: string, mc: string, loader: string, extra: any = {}) => ({
     id, name, mcVersion: mc, loader, loaderVersion: "0.20.1", versionId: "", installed: true, ramMb: 0, javaPath: "", jvmArgs: "",

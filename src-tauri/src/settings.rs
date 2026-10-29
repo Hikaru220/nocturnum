@@ -34,6 +34,8 @@ pub struct Settings {
     pub perf_tier: String,
     pub install_optimization: bool,
     pub high_priority: bool,
+    /// allow offline profiles (singleplayer / LAN) without a licensed Microsoft account
+    pub allow_offline_unlicensed: bool,
 }
 
 impl Default for Settings {
@@ -68,6 +70,7 @@ impl Default for Settings {
             perf_tier: "auto".into(),
             install_optimization: true,
             high_priority: true,
+            allow_offline_unlicensed: true,
         }
     }
 }

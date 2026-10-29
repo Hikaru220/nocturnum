@@ -429,7 +429,7 @@ fn cancel_login() {
 
 #[tauri::command]
 fn add_offline_account(name: String) -> R<auth::Account> {
-    auth::add_offline(&name)
+    auth::add_offline(&name, settings::load().allow_offline_unlicensed)
 }
 
 #[tauri::command]

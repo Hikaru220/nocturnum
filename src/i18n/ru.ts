@@ -276,6 +276,8 @@ const ru = {
   "set.check": "Проверить",
   "set.discordSetup": "Как получить Application ID",
   "set.msSetup": "Как получить Azure Client ID",
+  "set.offlineFree": "Офлайн-профили без лицензии",
+  "set.offlineFreeHint": "Только для одиночной игры и LAN. На серверы с лицензионной защитой офлайн-профиль не зайдёт.",
   "set.saved": "Настройки сохранены",
   "set.invalid": "Некорректное значение",
 
@@ -325,6 +327,7 @@ const ru = {
   "wiz.step1Text": "Войдите в аккаунт Microsoft, чтобы играть по лицензии.",
   "wiz.step2Text": "Выберите версию игры. Всё остальное лаунчер сделает сам.",
   "wiz.step3Text": "Готово! Нажмите «Играть» — игра скачается и запустится.",
+  "wiz.offline": "Играть офлайн",
   "wiz.skip": "Пропустить",
   "wiz.finish": "К игре",
   "wiz.signedAs": "Вы вошли как {name}",

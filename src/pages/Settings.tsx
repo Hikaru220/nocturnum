@@ -85,6 +85,7 @@ export default function Settings() {
             {row(t("set.sodium"), s.installSodium, (v) => patch({ installSodium: v }), t("set.sodiumHint"))}
             {row(t("set.hud"), s.installHud, (v) => patch({ installHud: v }))}
             {row(t("set.opt"), s.installOptimization, (v) => patch({ installOptimization: v }), t("set.optHint"))}
+            {row(t("set.offlineFree"), s.allowOfflineUnlicensed, (v) => patch({ allowOfflineUnlicensed: v }), t("set.offlineFreeHint"))}
             {row(t("set.priority"), s.highPriority, (v) => patch({ highPriority: v }))}
             <Field label={t("set.tier")} hint={hw ? t("set.detected", { gpu: hw.gpu || "—", gb: (hw.ramMb / 1024).toFixed(0), tier: t((`set.tier.${hw.tier}`) as never) }) : t("set.tierHint")} row>
               <Select value={s.perfTier} onChange={(e) => patch({ perfTier: e.target.value as never })} className="!w-44">

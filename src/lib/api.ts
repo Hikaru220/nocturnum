@@ -32,6 +32,7 @@ export interface Settings {
   perfTier: "auto" | "low" | "mid" | "high";
   installOptimization: boolean;
   highPriority: boolean;
+  allowOfflineUnlicensed: boolean;
 }
 
 export interface Instance {

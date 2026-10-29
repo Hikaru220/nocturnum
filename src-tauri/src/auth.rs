@@ -90,14 +90,14 @@ pub fn offline_uuid(name: &str) -> String {
     format!("{}-{}-{}-{}-{}", &s[0..8], &s[8..12], &s[12..16], &s[16..20], &s[20..32])
 }
 
-pub fn add_offline(name: &str) -> R<Account> {
+pub fn add_offline(name: &str, allow_unlicensed: bool) -> R<Account> {
     let name = name.trim();
     let re = regex::Regex::new(r"^[A-Za-z0-9_]{3,16}$").unwrap();
     if !re.is_match(name) {
         return Err(anyhow!("Ник: 3–16 символов, латиница, цифры и _").into());
     }
     let mut s = load_store();
-    if !s.accounts.iter().any(|a| a.kind == "microsoft") {
+    if !allow_unlicensed && !s.accounts.iter().any(|a| a.kind == "microsoft") {
         return Err(anyhow!("Офлайн-профили доступны только при наличии лицензионного аккаунта Microsoft").into());
     }
     let acc = Account {

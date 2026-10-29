@@ -268,6 +268,8 @@ const en: Record<Key, string> = {
   "set.check": "Check",
   "set.discordSetup": "How to get an Application ID",
   "set.msSetup": "How to get an Azure Client ID",
+  "set.offlineFree": "Offline profiles without a licence",
+  "set.offlineFreeHint": "Singleplayer and LAN only. Offline profiles cannot join licensed online servers.",
   "set.saved": "Settings saved",
   "set.invalid": "Invalid value",
 
@@ -315,6 +317,7 @@ const en: Record<Key, string> = {
   "wiz.step1Text": "Sign in with Microsoft to play with your license.",
   "wiz.step2Text": "Pick a game version. The launcher handles the rest.",
   "wiz.step3Text": "All set! Press Play — the game downloads and starts.",
+  "wiz.offline": "Play offline",
   "wiz.skip": "Skip",
   "wiz.finish": "Let's play",
   "wiz.signedAs": "Signed in as {name}",
