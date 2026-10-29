@@ -23,7 +23,7 @@ public final class KeystrokesModule extends Module {
     private static final int K = 22, GAP = 2;
 
     public KeystrokesModule() {
-        super("keystrokes", Category.HUD, true, true, 0.01f, 0.8f);
+        super("keystrokes", Category.HUD, true, true, 0.84f, 0.64f);
     }
 
     @Override public int width(Gfx g) { return K * 3 + GAP * 2; }

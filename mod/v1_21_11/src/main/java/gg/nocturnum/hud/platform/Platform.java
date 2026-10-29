@@ -288,7 +288,7 @@ public final class Platform {
             gg.nocturnum.hud.module.ComfortModules.TabEditor.wrap(new Gfx(graphics), () -> original.render(graphics, tracker)));
         // timestamps and click-to-copy for system / server messages
         net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.MODIFY_GAME.register((msg, overlay) ->
-            overlay ? msg : gg.nocturnum.hud.module.ComfortModules.EnhancedChat.decorate(msg));
+            overlay ? msg : gg.nocturnum.hud.module.Whitelist.pass(msg));
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
             if (world.isClientSide()) gg.nocturnum.hud.module.PackModules.onAttack(entity);
             return InteractionResult.PASS;

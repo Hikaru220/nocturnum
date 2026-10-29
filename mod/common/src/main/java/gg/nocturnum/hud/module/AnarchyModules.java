@@ -29,7 +29,6 @@ public final class AnarchyModules {
     private AnarchyModules() {}
 
     public static void registerAll() {
-        Config.register(new Esp());
         Config.register(new TargetEsp());
         Config.register(new Hitboxes());
         Config.register(new Minimap());
@@ -74,59 +73,6 @@ public final class AnarchyModules {
         g.fill(x1, y2 - t, x2, y2, col);
         g.fill(x1, y1, x1 + t, y2, col);
         g.fill(x2 - t, y1, x2, y2, col);
-    }
-
-    /** Outlines players, mobs, animals or items, also behind walls. */
-    static final class Esp extends AnarchyModule {
-        public final Setting.Mode style = add(new Setting.Mode("style", 1, "frame2d", "box3d"));
-        public final Setting.Bool players = add(new Setting.Bool("players", true));
-        public final Setting.Bool mobs = add(new Setting.Bool("mobs", true));
-        public final Setting.Bool animals = add(new Setting.Bool("animals", false));
-        public final Setting.Bool items = add(new Setting.Bool("items", false));
-        public final Setting.Color playerColor = add(new Setting.Color("playerColor", 0xFFFF5A6A));
-        public final Setting.Color mobColor = add(new Setting.Color("mobColor", 0xFFFFD23F));
-        public final Setting.Color animalColor = add(new Setting.Color("animalColor", 0xFF7CFF6B));
-        public final Setting.Color itemColor = add(new Setting.Color("itemColor", 0xFF4FD6E8));
-        public final Setting.Num range = add(new Setting.Num("range", 64f, 8f, 160f, 8f, "m"));
-        public final Setting.Num thickness = add(new Setting.Num("thickness", 1f, 1f, 3f, 1f, "px"));
-
-        Esp() {
-            super("esp", false, 0, 0);
-            visual = true;
-        }
-
-        @Override
-        public void overlay(Gfx g, float pt) {
-            if (!Game.inWorld() || Platform.screenOpen()) return;
-            var me = Game.player();
-            double r2 = range.get() * range.get();
-            for (Entity e : entities()) {
-                if (e == me || e.distanceToSqr(me) > r2) continue;
-                int col;
-                if (e instanceof Player) {
-                    if (!players.get()) continue;
-                    col = playerColor.argb();
-                } else if (e instanceof Animal) {
-                    if (!animals.get()) continue;
-                    col = animalColor.argb();
-                } else if (e instanceof LivingEntity) {
-                    if (!mobs.get()) continue;
-                    col = mobColor.argb();
-                } else if (e instanceof ItemEntity) {
-                    if (!items.get()) continue;
-                    col = itemColor.argb();
-                } else {
-                    continue;
-                }
-                AABB b = e.getBoundingBox();
-                float[][] s = corners(b);
-                if (style.is("box3d")) box3d(g, s, thickness.get(), col);
-                else {
-                    float[] bb = bounds(s);
-                    if (bb != null) frame(g, bb, thickness.get(), col);
-                }
-            }
-        }
     }
 
     /** A rotating ring around whoever you just hit. */

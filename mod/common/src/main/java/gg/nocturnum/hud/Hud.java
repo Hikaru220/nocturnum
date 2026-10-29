@@ -62,7 +62,7 @@ public final class Hud {
         }
         if (d.contains("fx") && world && Game.inWorld()) {
             if (debugTicks == open - 120) {
-                for (String id : new String[]{"jumpcircles", "chinahat", "trails", "blockoverlay", "hiteffects", "crosshair", "hitcolor", "esp", "hitboxes", "minimap"}) {
+                for (String id : new String[]{"jumpcircles", "chinahat", "trails", "blockoverlay", "hiteffects", "crosshair", "hitcolor", "hitboxes", "minimap"}) {
                     var m = Config.byId(id);
                     if (m != null) m.setEnabled(true);
                 }
