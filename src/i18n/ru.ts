@@ -273,6 +273,9 @@ const ru = {
   "set.opt": "Ставить оптимизирующие моды (Sodium, Lithium, FerriteCore, ModernFix…)",
   "set.optHint": "Оригинальные файлы с Modrinth, каждый можно отключить во вкладке «Моды».",
   "set.priority": "Повышенный приоритет игры",
+  "set.check": "Проверить",
+  "set.discordSetup": "Как получить Application ID",
+  "set.msSetup": "Как получить Azure Client ID",
   "set.saved": "Настройки сохранены",
   "set.invalid": "Некорректное значение",
 

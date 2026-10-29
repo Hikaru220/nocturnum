@@ -158,3 +158,33 @@ pub fn set(s: State) {
         let _ = tx.send(s);
     }
 }
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscordCheck {
+    pub ok: bool,
+    pub running: bool,
+    pub message: String,
+}
+
+/// Verifies the Application ID format and that the local Discord client accepts the connection.
+pub fn check(app_id: &str) -> DiscordCheck {
+    let id = app_id.trim();
+    if id.len() < 17 || id.len() > 20 || !id.chars().all(|c| c.is_ascii_digit()) {
+        return DiscordCheck { ok: false, running: false, message: "Application ID — число из 17–20 цифр (Developer Portal → General Information).".into() };
+    }
+    match DiscordIpcClient::new(id) {
+        Ok(mut c) => match c.connect() {
+            Ok(()) => {
+                let _ = c.close();
+                DiscordCheck { ok: true, running: true, message: "Discord найден, подключение к приложению успешно. Статус появится при запуске игры.".into() }
+            }
+            Err(e) => DiscordCheck {
+                ok: false,
+                running: false,
+                message: format!("Не удалось подключиться к Discord: запустите приложение Discord (не браузерную версию) и повторите. ({e})"),
+            },
+        },
+        Err(e) => DiscordCheck { ok: false, running: false, message: format!("Ошибка клиента Discord: {e}") },
+    }
+}

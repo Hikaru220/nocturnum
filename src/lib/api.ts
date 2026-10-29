@@ -201,6 +201,8 @@ export const api = {
   listAccounts: () => invoke<Account[]>("list_accounts"),
   loginMicrosoft: () => invoke<Account>("login_microsoft"),
   cancelLogin: () => invoke<void>("cancel_login"),
+  checkMsClient: (clientId: string) => invoke<{ ok: boolean; message: string }>("check_ms_client", { clientId }),
+  checkDiscord: (appId: string) => invoke<{ ok: boolean; running: boolean; message: string }>("check_discord", { appId }),
   addOffline: (name: string) => invoke<Account>("add_offline_account", { name }),
   removeAccount: (id: string) => invoke<void>("remove_account", { id }),
 

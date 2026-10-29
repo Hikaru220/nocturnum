@@ -381,3 +381,43 @@ pub async fn upload_skin(id: &str, client_id: &str, png: Vec<u8>, slim: bool) ->
     }
     Ok(())
 }
+
+#[derive(Serialize)]
+pub struct Check {
+    pub ok: bool,
+    pub message: String,
+}
+
+/// Asks Microsoft whether this client id exists and allows the device-code flow (no sign-in happens).
+pub async fn check_client_id(client_id: &str) -> Check {
+    let id = client_id.trim();
+    let re = regex::Regex::new(r"^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$").unwrap();
+    if !re.is_match(id) {
+        return Check { ok: false, message: "ID должен выглядеть как 00000000-0000-0000-0000-000000000000 (Application (client) ID из Azure).".into() };
+    }
+    let resp = CLIENT
+        .post("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode")
+        .form(&[("client_id", id), ("scope", SCOPE)])
+        .send()
+        .await;
+    let resp = match resp {
+        Ok(r) => r,
+        Err(e) => return Check { ok: false, message: format!("Нет связи с Microsoft: {e}") },
+    };
+    let status = resp.status();
+    let body: Value = resp.json().await.unwrap_or(Value::Null);
+    if status.is_success() && body["device_code"].is_string() {
+        return Check { ok: true, message: "Azure-приложение найдено, вход по коду включён. Осталось одобрение Mojang (см. docs/MICROSOFT_AUTH.md).".into() };
+    }
+    let desc = body["error_description"].as_str().unwrap_or("").to_string();
+    let hint = if desc.contains("AADSTS700016") {
+        "Приложение с таким ID не найдено. Проверьте ID и что регистрация создана для личных аккаунтов Microsoft."
+    } else if desc.contains("AADSTS70002") || desc.contains("AADSTS7000218") || body["error"] == "invalid_client" || body["error"] == "unauthorized_client" {
+        "В Azure включите Authentication → Allow public client flows = Yes."
+    } else if desc.contains("AADSTS70011") {
+        "Приложению не разрешён нужный scope (XboxLive.signin)."
+    } else {
+        "Microsoft отклонил запрос."
+    };
+    Check { ok: false, message: format!("{hint} ({})", desc.lines().next().unwrap_or("").chars().take(140).collect::<String>()) }
+}

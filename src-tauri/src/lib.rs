@@ -411,6 +411,18 @@ async fn login_microsoft(app: AppHandle) -> R<auth::Account> {
 }
 
 #[tauri::command]
+async fn check_ms_client(client_id: String) -> auth::Check {
+    auth::check_client_id(&client_id).await
+}
+
+#[tauri::command]
+async fn check_discord(app_id: String) -> rpc::DiscordCheck {
+    tauri::async_runtime::spawn_blocking(move || rpc::check(&app_id))
+        .await
+        .unwrap_or(rpc::DiscordCheck { ok: false, running: false, message: "internal error".into() })
+}
+
+#[tauri::command]
 fn cancel_login() {
     auth::CANCEL.store(true, std::sync::atomic::Ordering::SeqCst);
 }
@@ -829,6 +841,8 @@ pub fn run() {
             list_accounts,
             login_microsoft,
             cancel_login,
+            check_ms_client,
+            check_discord,
             add_offline_account,
             remove_account,
             detect_java,

@@ -16,6 +16,9 @@ export default function Settings() {
   const [javaMsg, setJavaMsg] = useState("");
   const [moveData, setMoveData] = useState(true);
   const [log, setLog] = useState("");
+  const [checking, setChecking] = useState("");
+  const [discordMsg, setDiscordMsg] = useState<{ ok: boolean; message: string } | null>(null);
+  const [msMsg, setMsMsg] = useState<{ ok: boolean; message: string } | null>(null);
   const [hw, setHw] = useState<{ gpu: string; ramMb: number; tier: string } | null>(null);
   useEffect(() => {
     api.hardwareInfo().then(setHw).catch(() => {});
@@ -212,10 +215,20 @@ export default function Settings() {
             {row(t("set.rpcServer"), s.rpcHideServer, (v) => patch({ rpcHideServer: v }))}
             {row(t("set.rpcInstance"), s.rpcHideInstance, (v) => patch({ rpcHideInstance: v }))}
             <Field label={t("set.rpcAppId")}>
-              <Input value={s.discordAppId} placeholder="123456789012345678" onChange={(e) => patch({ discordAppId: e.target.value.trim() })} />
+              <div className="flex gap-2">
+                <Input value={s.discordAppId} placeholder="123456789012345678" onChange={(e) => { patch({ discordAppId: e.target.value.trim() }); setDiscordMsg(null); }} />
+                <Button loading={checking === "d"} onClick={async () => { setChecking("d"); try { setDiscordMsg(await api.checkDiscord(s.discordAppId)); } finally { setChecking(""); } }}>{t("set.check")}</Button>
+              </div>
+              {discordMsg && <p className={`text-sm mt-2 ${discordMsg.ok ? "text-ok" : "text-bad"}`}>{discordMsg.message}</p>}
+              <button className="text-xs text-accent mt-2 hover:underline" onClick={() => openUrl("https://github.com/Hikaru220/nocturnum/blob/main/docs/MICROSOFT_AUTH.md#discord-rich-presence")}>{t("set.discordSetup")}</button>
             </Field>
             <Field label={t("set.msClientId")} hint={t("set.msClientHint")}>
-              <Input value={s.msClientId} placeholder="00000000-0000-0000-0000-000000000000" onChange={(e) => patch({ msClientId: e.target.value.trim() })} />
+              <div className="flex gap-2">
+                <Input value={s.msClientId} placeholder="00000000-0000-0000-0000-000000000000" onChange={(e) => { patch({ msClientId: e.target.value.trim() }); setMsMsg(null); }} />
+                <Button loading={checking === "m"} onClick={async () => { setChecking("m"); try { setMsMsg(await api.checkMsClient(s.msClientId)); } finally { setChecking(""); } }}>{t("set.check")}</Button>
+              </div>
+              {msMsg && <p className={`text-sm mt-2 ${msMsg.ok ? "text-ok" : "text-bad"}`}>{msMsg.message}</p>}
+              <button className="text-xs text-accent mt-2 hover:underline" onClick={() => openUrl("https://github.com/Hikaru220/nocturnum/blob/main/docs/MICROSOFT_AUTH.md")}>{t("set.msSetup")}</button>
             </Field>
           </>
         )}

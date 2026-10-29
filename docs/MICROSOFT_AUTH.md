@@ -1,25 +1,41 @@
-# Microsoft sign-in (licensed accounts)
+# Вход через Microsoft и Discord: что это и откуда брать
 
-Nocturnum signs in with the standard device-code flow: Microsoft → Xbox Live → XSTS → Minecraft Services.
-Refresh tokens are stored in the OS credential store (Windows Credential Manager / Keychain), never in JSON files.
+Лаунчеру нужны **два числа**, которые выдаёт не он, а сторонние сервисы. Без них две функции выключены, всё остальное работает.
 
-## You need your own Azure app
+| Что | Зачем | Где взять | Куда вставить |
+|---|---|---|---|
+| **Azure Client ID** | Вход в лицензионный аккаунт Minecraft | Azure Portal (бесплатно) + одобрение Mojang | Настройки → Discord → «Azure Client ID» → **Проверить** |
+| **Discord Application ID** | Статус «Играет в Nocturnum» в профиле | Discord Developer Portal (бесплатно) | Настройки → Discord → «Discord Application ID» → **Проверить** |
 
-Minecraft Services rejects unknown apps with `Invalid app registration`, so the launcher ships **without** a client ID.
+Кнопка **«Проверить»** рядом с полем сама спрашивает Microsoft / Discord и говорит, что не так.
 
-1. Open the [Azure portal → App registrations](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade) and create an app.
-   - Supported account types: *Personal Microsoft accounts only* (or "any tenant + personal").
-   - Authentication → *Allow public client flows*: **Yes**.
-2. Copy the *Application (client) ID*.
-3. Ask Mojang to approve the app: <https://aka.ms/AppRegInfo> (form "Minecraft API access"). Approval can take days.
-4. In the launcher: **Settings → Discord → Azure Client ID** — paste the ID. Sign in from **Accounts**.
+## 1. Azure Client ID (вход через Microsoft)
 
-Until the app is approved, sign-in ends with the message "Microsoft app is not approved by Mojang".
-Offline profiles (singleplayer / LAN only) require at least one licensed account, like in Prism Launcher.
+Зачем так сложно: Minecraft принимает вход только от приложений, которые Mojang знает. Это защита от кражи аккаунтов; у всех лаунчеров (Prism, Modrinth App) своя регистрация.
 
-## Discord Rich Presence
+1. Откройте <https://portal.azure.com> → «App registrations» → **New registration**.
+   - Name: Nocturnum Launcher.
+   - Supported account types: **Personal Microsoft accounts only**.
+   - Redirect URI можно не заполнять.
+2. Вкладка **Authentication** → внизу **Allow public client flows = Yes** → Save. (Вход по коду на экране — это «public client».)
+3. На странице **Overview** скопируйте **Application (client) ID** — это и есть нужное число.
+4. Вставьте в лаунчер, нажмите **Проверить**. Зелёное сообщение значит: приложение найдено и вход по коду включён.
+5. Отправьте приложение на одобрение Mojang: <https://aka.ms/AppRegInfo> (форма доступа к Minecraft API). Ответ приходит за несколько дней. **Пока одобрения нет**, вход заканчивается ошибкой `Invalid app registration` — это нормально, лаунчер так и сообщает.
+6. Раздел «Аккаунты» → «Войти через Microsoft». Лаунчер покажет код и страницу; введите код в браузере, подтвердите вход.
 
-Create an application in the [Discord Developer Portal](https://discord.com/developers/applications), upload the images
-`nocturnum` (launcher logo) and paste the Application ID into **Settings → Discord**. The two profile buttons
-("Скачать Nocturnum", "Discord-сервер") come from [`config/links.json`](../config/links.json) in this repository, so they
-can change without a launcher update. Discord only shows your own buttons to *other* people — test with a second account.
+Токены хранятся в системном хранилище (Диспетчер учётных данных Windows), а не в файлах лаунчера.
+
+### А если лицензионного аккаунта нет?
+Офлайн-профиль (одиночная игра и LAN) в Nocturnum можно добавить **только после** входа хотя бы одним лицензионным аккаунтом. Это условие ТЗ: оно защищает проект от обвинений в обходе лицензии. Для разработки есть режим проверки сборки в консоли (`--selftest`), он обходит это правило и предназначен только для тестов.
+
+## 2. Discord Application ID (Rich Presence)
+
+Это не вход в Discord и не бот. Лаунчер разговаривает с **установленным приложением Discord** на вашем ПК по локальному каналу, сервер не нужен.
+
+1. <https://discord.com/developers/applications> → **New Application** → назовите **Nocturnum** (под этим именем в профиле будет написано «Играет в Nocturnum»).
+2. **General Information** → скопируйте **Application ID** (17–20 цифр).
+3. **Rich Presence → Art Assets**: загрузите картинку с именем **`nocturnum`** (иконка 512×512 из `brand/nocturnum-icon-512.png`). Это большая картинка статуса.
+4. Вставьте ID в лаунчер, откройте **приложение Discord** (не браузер) и нажмите **Проверить**.
+5. Запустите игру: статус обновится (в меню, в одиночной игре, на сервере). IP сервера можно скрыть в настройках.
+
+Две кнопки в профиле («Скачать Nocturnum» и «Discord-сервер») берутся из [`config/links.json`](../config/links.json) в этом репозитории — их можно менять без выхода новой версии лаунчера. Пока адрес Discord-сервера пуст, показывается только первая кнопка. Discord показывает кнопки **только другим людям**, поэтому проверять нужно со второго аккаунта.

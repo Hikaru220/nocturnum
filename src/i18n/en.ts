@@ -265,6 +265,9 @@ const en: Record<Key, string> = {
   "set.opt": "Install optimisation mods (Sodium, Lithium, FerriteCore, ModernFix…)",
   "set.optHint": "Original files from Modrinth; each can be turned off in the Mods tab.",
   "set.priority": "Raise game process priority",
+  "set.check": "Check",
+  "set.discordSetup": "How to get an Application ID",
+  "set.msSetup": "How to get an Azure Client ID",
   "set.saved": "Settings saved",
   "set.invalid": "Invalid value",
 
