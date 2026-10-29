@@ -369,6 +369,11 @@ async fn launch_instance(app: AppHandle, id: String) -> R<()> {
 }
 
 #[tauri::command]
+fn cancel_launch(id: String) -> R<()> {
+    launch::cancel(&id)
+}
+
+#[tauri::command]
 fn kill_instance(id: String) -> R<()> {
     launch::kill(&id)
 }
@@ -835,6 +840,7 @@ pub fn run() {
             repair_instance,
             launch_instance,
             kill_instance,
+            cancel_launch,
             running_instances,
             game_log,
             apply_crash_fix,

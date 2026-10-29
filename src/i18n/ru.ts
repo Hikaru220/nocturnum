@@ -46,6 +46,7 @@ const ru = {
   "home.noInstancesHint": "Создайте первую сборку — это займёт минуту.",
   "home.createFirst": "Создать сборку",
   "home.stop": "Остановить игру",
+  "home.cancel": "Отменить запуск",
   "home.running": "Игра запущена",
   "home.noAccount": "Сначала добавьте аккаунт",
   "news.1.title": "HUD-мод Nocturnum",

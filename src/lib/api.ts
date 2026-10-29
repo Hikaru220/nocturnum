@@ -195,6 +195,7 @@ export const api = {
   repairInstance: (id: string) => invoke<void>("repair_instance", { id }),
   launch: (id: string) => invoke<void>("launch_instance", { id }),
   kill: (id: string) => invoke<void>("kill_instance", { id }),
+  cancelLaunch: (id: string) => invoke<void>("cancel_launch", { id }),
   running: () => invoke<string[]>("running_instances"),
   gameLog: (id: string) => invoke<string[]>("game_log", { id }),
   applyCrashFix: (id: string, action: string) => invoke<void>("apply_crash_fix", { id, action }),

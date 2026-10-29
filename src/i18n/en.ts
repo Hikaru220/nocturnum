@@ -45,6 +45,7 @@ const en: Record<Key, string> = {
   "home.noInstancesHint": "Create your first instance — it takes a minute.",
   "home.createFirst": "Create instance",
   "home.stop": "Stop game",
+  "home.cancel": "Cancel launch",
   "home.running": "Game is running",
   "home.noAccount": "Add an account first",
   "news.1.title": "Nocturnum HUD mod",

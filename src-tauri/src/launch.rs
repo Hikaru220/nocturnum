@@ -23,6 +23,7 @@ pub struct Running {
 }
 
 pub static RUNNING: Lazy<Mutex<HashMap<String, Running>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+pub static CANCEL: Lazy<Mutex<HashMap<String, std::sync::Arc<tokio::sync::Notify>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 pub static LOGS: Lazy<Mutex<HashMap<String, VecDeque<String>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 const MAX_LOG_LINES: usize = 5000;
 
@@ -341,7 +342,13 @@ pub async fn launch(app: AppHandle, instance_id: String) -> R<()> {
     if inst.account_id.is_empty() {
         return Err(anyhow!("Выберите аккаунт для запуска").into());
     }
-    let result = launch_inner(&app, &mut inst, &st, &pid).await;
+    let stop = std::sync::Arc::new(tokio::sync::Notify::new());
+    CANCEL.lock().unwrap().insert(instance_id.clone(), stop.clone());
+    let result = tokio::select! {
+        r = launch_inner(&app, &mut inst, &st, &pid) => r,
+        _ = stop.notified() => Err(anyhow!("Запуск отменён").into()),
+    };
+    CANCEL.lock().unwrap().remove(&instance_id);
     if let Err(e) = &result {
         net::emit_progress(&app, &pid, "Ошибка", 0.0, 0.0, true, Some(e.0.clone()));
     }
@@ -497,6 +504,17 @@ fn set_high_priority(pid: u32) {
 }
 #[cfg(not(windows))]
 fn set_high_priority(_pid: u32) {}
+
+/// Stops a launch that is still downloading/preparing, or kills the running game.
+pub fn cancel(id: &str) -> R<()> {
+    if RUNNING.lock().unwrap().contains_key(id) {
+        return kill(id);
+    }
+    if let Some(n) = CANCEL.lock().unwrap().get(id) {
+        n.notify_one();
+    }
+    Ok(())
+}
 
 pub fn kill(id: &str) -> R<()> {
     let pid = RUNNING.lock().unwrap().get(id).map(|r| r.pid);

@@ -75,7 +75,7 @@ export function PlayButton({ inst, big, className }: { inst: Instance; big?: boo
       </Button>
     );
   }
-  return (
+  const btn = (
     <button
       disabled={busy}
       onClick={async () => {
@@ -90,7 +90,7 @@ export function PlayButton({ inst, big, className }: { inst: Instance; big?: boo
         "relative overflow-hidden inline-flex items-center justify-center gap-3 font-bold transition-all active:scale-[0.99] disabled:cursor-wait",
         "bg-accent text-[var(--on-accent)] hover:brightness-110 glow",
         big ? "h-14 px-10 text-lg rounded-[12px] min-w-64" : "h-10 px-6 text-sm rounded-[10px] min-w-32",
-        className,
+        busy ? "flex-1" : className,
       )}
     >
       {busy && (
@@ -112,6 +112,13 @@ export function PlayButton({ inst, big, className }: { inst: Instance; big?: boo
         )}
       </span>
     </button>
+  );
+  if (!busy) return btn;
+  return (
+    <div className={cx("flex items-stretch gap-2", className)}>
+      {btn}
+      <Button variant="danger" big={big} icon={<Square className="size-4" />} title={t("home.cancel")} aria-label={t("home.cancel")} onClick={() => api.cancelLaunch(inst.id)} />
+    </div>
   );
 }
 
