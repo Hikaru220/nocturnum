@@ -64,7 +64,7 @@ impl Default for Settings {
             background: String::new(),
             reduce_motion: false,
             ms_client_id: String::new(),
-            discord_app_id: String::new(),
+            discord_app_id: String::new(), // empty = built-in Nocturnum app (1565258293826297997)
             perf_tier: "auto".into(),
             install_optimization: true,
             high_priority: true,

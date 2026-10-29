@@ -14,6 +14,14 @@ pub enum State {
     InGame { screen: String, server: String, name: String, mc: String, loader: String, since: i64 },
 }
 
+/// Application ID of the Nocturnum app in the Discord Developer Portal (public, not a secret).
+pub const DEFAULT_APP_ID: &str = "1565258293826297997";
+
+fn effective_id(custom: &str) -> String {
+    let c = custom.trim();
+    if c.is_empty() { DEFAULT_APP_ID.to_string() } else { c.to_string() }
+}
+
 const LINKS_URL: &str = "https://raw.githubusercontent.com/Hikaru220/nocturnum/main/config/links.json";
 
 #[derive(Clone, Debug)]
@@ -73,7 +81,8 @@ pub fn start() {
                 last = m;
             }
             let st = settings::load();
-            let want = st.discord_rpc && !st.discord_app_id.trim().is_empty() && !matches!(last, State::Off);
+            let app_id = effective_id(&st.discord_app_id);
+            let want = st.discord_rpc && !matches!(last, State::Off);
             if !want {
                 if let Some(mut c) = client.take() {
                     let _ = c.clear_activity();
@@ -81,14 +90,14 @@ pub fn start() {
                 }
                 continue;
             }
-            if client.is_none() || connected_id != st.discord_app_id {
+            if client.is_none() || connected_id != app_id {
                 if let Some(mut c) = client.take() {
                     let _ = c.close();
                 }
-                match DiscordIpcClient::new(st.discord_app_id.trim()) {
+                match DiscordIpcClient::new(&app_id) {
                     Ok(mut c) => {
                         if c.connect().is_ok() {
-                            connected_id = st.discord_app_id.clone();
+                            connected_id = app_id.clone();
                             client = Some(c);
                         }
                     }
@@ -169,7 +178,8 @@ pub struct DiscordCheck {
 
 /// Verifies the Application ID format and that the local Discord client accepts the connection.
 pub fn check(app_id: &str) -> DiscordCheck {
-    let id = app_id.trim();
+    let id = effective_id(app_id);
+    let id = id.as_str();
     if id.len() < 17 || id.len() > 20 || !id.chars().all(|c| c.is_ascii_digit()) {
         return DiscordCheck { ok: false, running: false, message: "Application ID — число из 17–20 цифр (Developer Portal → General Information).".into() };
     }

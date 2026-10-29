@@ -216,7 +216,7 @@ export default function Settings() {
             {row(t("set.rpcInstance"), s.rpcHideInstance, (v) => patch({ rpcHideInstance: v }))}
             <Field label={t("set.rpcAppId")}>
               <div className="flex gap-2">
-                <Input value={s.discordAppId} placeholder="123456789012345678" onChange={(e) => { patch({ discordAppId: e.target.value.trim() }); setDiscordMsg(null); }} />
+                <Input value={s.discordAppId} placeholder="1565258293826297997" onChange={(e) => { patch({ discordAppId: e.target.value.trim() }); setDiscordMsg(null); }} />
                 <Button loading={checking === "d"} onClick={async () => { setChecking("d"); try { setDiscordMsg(await api.checkDiscord(s.discordAppId)); } finally { setChecking(""); } }}>{t("set.check")}</Button>
               </div>
               {discordMsg && <p className={`text-sm mt-2 ${discordMsg.ok ? "text-ok" : "text-bad"}`}>{discordMsg.message}</p>}
