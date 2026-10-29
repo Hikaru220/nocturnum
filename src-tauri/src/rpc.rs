@@ -30,7 +30,7 @@ struct Links {
 }
 
 fn default_links() -> Links {
-    Links { buttons: vec![("Скачать Nocturnum".into(), "https://t.me/Nocturnum_Launcher".into())] }
+    Links { buttons: vec![("Скачать лаунчер".into(), "https://t.me/Nocturnum_Launcher".into())] }
 }
 
 fn parse_links(v: &serde_json::Value) -> Links {
