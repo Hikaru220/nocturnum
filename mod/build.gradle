@@ -1,4 +1,4 @@
 // Root project only aggregates the per-version Fabric mods.
 tasks.register('buildAll') {
-    dependsOn ':v1_21_11:build', ':v26_3:build'
+    dependsOn ':v1_21_11:build', ':v26_2:build', ':v26_3:build'
 }

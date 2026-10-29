@@ -96,6 +96,14 @@ public final class Hud {
             }
             if (debugTicks > open - 90 && debugTicks <= open + 58) Game.player().setYRot(Game.player().getYRot() + 6f);
         }
+        if (d.contains("menuclick")) {
+            var v = Platform.currentView();
+            if (debugTicks > 150 && debugTicks % 40 == 0 && v instanceof gg.nocturnum.hud.ui.MainMenuView) {
+                Platform.log("MENUCLICK sending at " + (v.height * 0.22 + 70));
+                Platform.simulateClick(100, v.height * 0.22 + 56 + 11);
+            }
+            if (debugTicks > 150 && debugTicks % 40 == 5) Platform.log("MENUCLICK screen now: " + (Platform.currentView() == null ? "other-screen" : "still-view"));
+        }
         if (debugTicks == open + 60 && d.contains("shot")) Platform.debugShot();
         if (d.contains("loadshot") && (debugTicks == 2 || debugTicks == 12 || debugTicks == 25)) Platform.debugShot();
     }

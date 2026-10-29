@@ -53,7 +53,7 @@ public final class Ui {
     private final Map<Object, Tween> tweens = new IdentityHashMap<>();
 
     public void begin(float mouseX, float mouseY) {
-        last = frame;
+        if (!frame.isEmpty()) last = frame;
         frame = new ArrayList<>();
         mx = mouseX;
         my = mouseY;

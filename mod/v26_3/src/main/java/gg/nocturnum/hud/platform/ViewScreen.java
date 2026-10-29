@@ -18,6 +18,8 @@ public final class ViewScreen extends Screen {
         this.view = view;
     }
 
+    public View view() { return view; }
+
     @Override
     protected void init() { view.init(width, height); }
 

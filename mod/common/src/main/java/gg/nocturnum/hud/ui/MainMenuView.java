@@ -21,6 +21,9 @@ public final class MainMenuView extends View {
     private final float[][] stars = new float[170][4]; // x, y, size, phase
     private final List<Tween> hovers = new ArrayList<>();
     private float mx, my;
+    /** Click targets kept between frames (x, y, w, h) so clicks never depend on render timing. */
+    private final List<float[]> hitBoxes = new ArrayList<>();
+    private final List<Runnable> hitActions = new ArrayList<>();
 
     public MainMenuView() {
         Random r = new Random(7);
@@ -74,6 +77,8 @@ public final class MainMenuView extends View {
         g.text(Lang.t("menu.tagline"), Math.round(bx), Math.round(by + 30), Theme.TEXT_DIM, false);
         String[] labels = {Lang.t("menu.singleplayer"), Lang.t("menu.multiplayer"), "Nocturnum", Lang.t("menu.options"), Lang.t("menu.quit")};
         Runnable[] actions = {Platform::openSingleplayer, Platform::openMultiplayer, () -> Platform.openView(new ClickGuiView()), Platform::openOptions, Platform::quit};
+        hitBoxes.clear();
+        hitActions.clear();
         float y = by + 56;
         for (int i = 0; i < labels.length; i++) {
             float w = 150, h = 22;
@@ -87,9 +92,8 @@ public final class MainMenuView extends View {
             Draw.ring(g, bx + xo, y, w, h, 6, 1, Theme.accent(Math.round(60 + 160 * f)));
             g.text(labels[i], Math.round(bx + xo + 12), Math.round(y + (h - g.fontH()) / 2f) + 1, Colors.lerp(Theme.TEXT, 0xFF0D0D18, f), false);
             Runnable a = actions[i];
-            ui.region(bx, y, w, h).press = (b, px2, py2) -> {
-                if (b == 0) a.run();
-            };
+            hitBoxes.add(new float[]{bx, y, w, h});
+            hitActions.add(a);
             y += h + 6;
         }
         // player card
@@ -113,7 +117,8 @@ public final class MainMenuView extends View {
                 g.text(s[0], Math.round(qx + 8), Math.round(qy + 5), Theme.TEXT, true);
                 g.text(s[1], Math.round(qx + 8), Math.round(qy + 16), Theme.TEXT_FAINT, false);
                 String ip = s[1], name = s[0];
-                ui.region(qx, qy, w, h).press = (b, px2, py2) -> Platform.joinServer(name, ip);
+                hitBoxes.add(new float[]{qx, qy, w, h});
+                hitActions.add(() -> Platform.joinServer(name, ip));
                 qx += w + 8;
             }
         }
@@ -123,8 +128,18 @@ public final class MainMenuView extends View {
     }
 
     @Override
-    public boolean mouseClicked(double x, double y, int button) { return ui.click(x, y, button); }
+    public boolean mouseClicked(double x, double y, int button) {
+        if (button != 0) return false;
+        for (int i = 0; i < hitBoxes.size(); i++) {
+            float[] b = hitBoxes.get(i);
+            if (x >= b[0] && x < b[0] + b[2] && y >= b[1] && y < b[1] + b[3]) {
+                hitActions.get(i).run();
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Override
-    public boolean mouseReleased(double x, double y, int button) { return ui.release(); }
+    public boolean mouseReleased(double x, double y, int button) { return false; }
 }

@@ -221,6 +221,22 @@ public final class Platform {
     /** The 26.3 renderer pulls the active ids from PostModules itself (see GameRendererMixin). */
     public static void setPostEffects(java.util.List<String> ids) {}
 
+    /** The view shown by the current screen, or null (developer tests). */
+    public static gg.nocturnum.hud.ui.View currentView() {
+        return Minecraft.getInstance().gui.screen() instanceof ViewScreen vs ? vs.view() : null;
+    }
+
+    /** Developer helper: clicks at GUI coordinates through the real MouseHandler path. */
+    public static void simulateClick(double gx, double gy) {
+        var mc = Minecraft.getInstance();
+        var w = mc.getWindow();
+        var mh = (gg.nocturnum.hud.mixin.MouseAccess) mc.mouseHandler;
+        mh.nocturnum$xpos(gx * w.getScreenWidth() / (double) w.getGuiScaledWidth());
+        mh.nocturnum$ypos(gy * w.getScreenHeight() / (double) w.getGuiScaledHeight());
+        mh.nocturnum$button(w.handle(), new net.minecraft.client.input.MouseButtonInfo(0, 0), 1);
+        mh.nocturnum$button(w.handle(), new net.minecraft.client.input.MouseButtonInfo(0, 0), 0);
+    }
+
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(c -> Hud.tick());
         HudElementRegistry.attachElementAfter(VanillaHudElements.SUBTITLES, Identifier.fromNamespaceAndPath("nocturnum", "hud"),
