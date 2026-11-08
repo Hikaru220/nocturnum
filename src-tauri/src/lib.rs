@@ -1,5 +1,6 @@
 #[cfg(windows)]
 mod winapi;
+mod sunshine;
 mod auth;
 mod error;
 mod hardware;
@@ -373,6 +374,11 @@ fn running_instances() -> Vec<String> {
 #[tauri::command]
 fn diagnostics(id: String, only_cmd: bool) -> String {
     launch::diagnostics(&id, only_cmd)
+}
+
+#[tauri::command]
+async fn sunshine_status() -> Option<sunshine::Status> {
+    sunshine::ping().await
 }
 
 #[tauri::command]
@@ -832,6 +838,7 @@ pub fn run() {
             repair_instance,
             launch_instance,
             kill_instance,
+            sunshine_status,
             diagnostics,
             cancel_launch,
             running_instances,

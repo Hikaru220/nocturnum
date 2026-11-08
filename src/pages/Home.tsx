@@ -1,7 +1,55 @@
-import { Plus, Sparkles } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { useEffect, useState } from "react";
+import { Plus, Sparkles, Server } from "lucide-react";
+import { api, errText } from "../lib/api";
 import { useApp, formatPlayTime } from "../lib/store";
 import { Button, Card, Empty } from "../components/ui";
 import { InlineProgress, InstanceIcon, LoaderBadge, PlayButton } from "../components/shared";
+
+/** SunShine banner (единое ТЗ 7.1): name, online, ping; refreshed once a minute only while the window is visible and no game runs. */
+function SunShineBanner() {
+  const { t, instances, settings, toast } = useApp();
+  const running = useApp((s) => s.running.length > 0);
+  const [st, setSt] = useState<{ online: number; max: number; pingMs: number; address: string } | null>(null);
+  const last = instances.find((i) => i.id === settings?.lastInstance) ?? instances[0];
+  useEffect(() => {
+    if (running) return;
+    let alive = true;
+    const poll = () => {
+      if (document.visibilityState === "visible") api.sunshineStatus().then((r) => alive && setSt(r)).catch(() => {});
+    };
+    poll();
+    const id = setInterval(poll, 60000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [running]);
+  const play = async () => {
+    if (!last) return toast("error", t("home.noInstances"));
+    try {
+      await api.updateInstance({ ...last, server: st?.address ?? "mc.sunshine-mc.ru:25864" });
+      await api.launch(last.id);
+    } catch (e) {
+      toast("error", errText(e));
+    }
+  };
+  return (
+    <section className="rounded-[12px] border border-line bg-surface p-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="flex items-center gap-4">
+        <div className="size-12 rounded-[12px] bg-accent/20 text-accent flex items-center justify-center"><Server className="size-6" /></div>
+        <div>
+          <div className="font-extrabold text-lg">SunShine</div>
+          <div className="text-sm text-dim">{st ? t("home.sunshineOnline", { online: st.online, max: st.max, ping: st.pingMs }) : t("home.sunshineOffline")}</div>
+        </div>
+      </div>
+      <div className="flex gap-3">
+        <Button onClick={() => openUrl("https://discord.gg/tp8sdmmUXv")}>Discord</Button>
+        <Button variant="primary" disabled={running} onClick={play}>{t("common.play")}</Button>
+      </div>
+    </section>
+  );
+}
 
 export default function Home() {
   const { t, instances, settings, navigate, setCreate } = useApp();
@@ -52,6 +100,8 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      <SunShineBanner />
 
       {instances.length > 1 && (
         <section>

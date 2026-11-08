@@ -46,6 +46,8 @@ const en: Record<Key, string> = {
   "home.createFirst": "Create instance",
   "inst.copyCmd": "Copy launch command",
   "inst.diag": "Performance diagnostics",
+  "home.sunshineOnline": "Online {online}/{max} · ping {ping} ms",
+  "home.sunshineOffline": "Server is not responding",
   "home.stop": "Stop game",
   "home.cancel": "Cancel launch",
   "home.running": "Game is running",

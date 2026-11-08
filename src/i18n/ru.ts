@@ -47,6 +47,8 @@ const ru = {
   "home.createFirst": "Создать сборку",
   "inst.copyCmd": "Скопировать команду запуска",
   "inst.diag": "Диагностика производительности",
+  "home.sunshineOnline": "Онлайн {online}/{max} · пинг {ping} мс",
+  "home.sunshineOffline": "Сервер сейчас не отвечает",
   "home.stop": "Остановить игру",
   "home.cancel": "Отменить запуск",
   "home.running": "Игра запущена",
