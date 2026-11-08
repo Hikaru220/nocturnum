@@ -8,10 +8,9 @@ import { InlineProgress, InstanceIcon, LoaderBadge, PlayButton } from "../compon
 
 /** SunShine banner (единое ТЗ 7.1): name, online, ping; refreshed once a minute only while the window is visible and no game runs. */
 function SunShineBanner() {
-  const { t, instances, settings, toast } = useApp();
+  const { t, instances, settings, toast, accounts, refreshInstances } = useApp();
   const running = useApp((s) => s.running.length > 0);
   const [st, setSt] = useState<{ online: number; max: number; pingMs: number; address: string } | null>(null);
-  const last = instances.find((i) => i.id === settings?.lastInstance) ?? instances[0];
   useEffect(() => {
     if (running) return;
     let alive = true;
@@ -26,10 +25,25 @@ function SunShineBanner() {
     };
   }, [running]);
   const play = async () => {
-    if (!last) return toast("error", t("home.noInstances"));
     try {
-      await api.updateInstance({ ...last, server: st?.address ?? "mc.sunshine-mc.ru:25864" });
-      await api.launch(last.id);
+      // one click: reuse the 26.2 Fabric build or create it (with the HUD mod), then join the server
+      let inst = instances.find((i) => i.mcVersion === "26.2" && i.loader === "fabric");
+      if (!inst) {
+        const lvs = await api.loaderVersions("fabric", "26.2");
+        const lv = (lvs.find((x) => x.stable) ?? lvs[0])?.version ?? "";
+        const hud = await api.hudStatus("26.2", "fabric");
+        inst = await api.createInstance({
+          name: "SunShine",
+          mcVersion: "26.2",
+          loader: "fabric",
+          loaderVersion: lv,
+          hudEnabled: hud.supported,
+          accountId: settings?.lastAccount || accounts[0]?.id || "",
+        });
+        await refreshInstances();
+      }
+      await api.updateInstance({ ...inst, server: st?.address ?? "mc.sunshine-mc.ru:25864" });
+      await api.launch(inst.id);
     } catch (e) {
       toast("error", errText(e));
     }
