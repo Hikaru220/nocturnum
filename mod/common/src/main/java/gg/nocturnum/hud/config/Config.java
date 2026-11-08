@@ -28,9 +28,35 @@ public final class Config {
     private static long lastSave;
     public static String profile = "default";
 
-    public static List<Module> modules() { return MODULES; }
+    private static final List<Module> ACTIVE = new ArrayList<>();
+    /** ТЗ 7.4: functions removed from the mod (replaced by ready-made mods or deleted); never ticked, drawn or listed. */
+    private static final java.util.Set<String> REMOVED = java.util.Set.of("arraylist", "keybinds", "combo", "reach", "cooldowns", "bowpower",
+        "scoreboard", "tabeditor", "notifications", "colorgrade", "motionblur", "weather", "selfnametag", "fovstates", "togglesprint",
+        "targetesp", "hitboxes", "friends", "streamer", "memory", "playtime", "stopwatch", "perfmonitor", "boost", "bgfps", "compass",
+        "saturation", "fpsping", "clock", "speed", "totems", "itemhand", "potions");
+    /** ТЗ 8.1: everything else starts off. */
+    private static final java.util.Set<String> DEFAULT_ON = java.util.Set.of("clickgui", "watermark", "armor", "itemcounter", "lowfire",
+        "leaveprotection", "discordrpc", "loading", "mainmenu", "crosshair");
+    private static int loadedVersion;
 
-    public static void register(Module m) { MODULES.add(m); }
+    public static List<Module> modules() { return ACTIVE; }
+
+    /** One-time clean-up: removed modules off, defaults per the specification. */
+    public static void cleanup() {
+        for (Module m : MODULES) {
+            if (REMOVED.contains(m.id)) m.silentOff();
+            else if (loadedVersion < 2 && !DEFAULT_ON.contains(m.id)) m.silentOff();
+        }
+        if (loadedVersion < 2) {
+            loadedVersion = 2;
+            markDirty();
+        }
+    }
+
+    public static void register(Module m) {
+        MODULES.add(m);
+        if (!REMOVED.contains(m.id)) ACTIVE.add(m);
+    }
 
     @SuppressWarnings("unchecked")
     public static <T extends Module> T get(Class<T> c) {
@@ -72,7 +98,7 @@ public final class Config {
 
     public static JsonObject toJson() {
         JsonObject root = new JsonObject();
-        root.addProperty("version", 1);
+        root.addProperty("version", 2);
         JsonObject mods = new JsonObject();
         for (Module m : MODULES) mods.add(m.id, m.save());
         root.add("modules", mods);
@@ -80,6 +106,7 @@ public final class Config {
     }
 
     public static void fromJson(JsonObject root) {
+        loadedVersion = root.has("version") ? root.get("version").getAsInt() : 0;
         if (!root.has("modules")) return;
         JsonObject mods = root.getAsJsonObject("modules");
         for (Module m : MODULES) {

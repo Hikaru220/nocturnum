@@ -17,7 +17,7 @@ pub const SODIUM: &str = "AANobbMI";
 pub const LITHIUM: &str = "gvQqBUqZ";
 
 /// Layer 1 of the optimisation stack (ТЗ пакет 2, п. 7.1): original files from Modrinth, never bundled.
-pub const OPTIMIZATION_SLUGS: &[&str] = &["sodium", "lithium", "ferrite-core", "modernfix", "immediatelyfast", "entityculling", "moreculling", "krypton"];
+pub const OPTIMIZATION_SLUGS: &[&str] = &["sodium", "sodium-extra", "lithium", "ferrite-core", "modernfix", "immediatelyfast", "entityculling", "moreculling", "badoptimizations", "dynamic-fps", "spark"];
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]

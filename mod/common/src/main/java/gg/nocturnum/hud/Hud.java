@@ -44,6 +44,7 @@ public final class Hud {
         ExtraModules.registerAll();
         Config.register(new StreamerModule());
         Config.load();
+        Config.cleanup();
         started = true;
     }
 

@@ -83,6 +83,9 @@ public abstract class Module {
     public boolean canEnable() { return true; }
 
     public void toggle() { setEnabled(!enabled); }
+    /** Turns the module off without events or sounds (start-up clean-up). */
+    public void silentOff() { enabled = false; }
+
     public boolean enabledByDefault() { return defaultEnabled; }
 
     public void onEnable() {}
