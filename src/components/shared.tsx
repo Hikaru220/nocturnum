@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Copy, ExternalLink, Gamepad2, Square, Wrench } from "lucide-react";
+import { Copy, ExternalLink, Gamepad2, Plus, Square, Wrench } from "lucide-react";
 import { api, errText, type Account, type Instance, type Loader } from "../lib/api";
 import { formatBytes, useApp } from "../lib/store";
-import { Badge, Button, cx, LoaderIcon, Modal, ProgressBar, Spinner, Input, Select, Checkbox, Field } from "./ui";
+import { Badge, Button, ContextMenu, cx, LoaderIcon, Modal, ProgressBar, Spinner, Input, Select, Checkbox, Field } from "./ui";
 
 export function Avatar({ account, size = 32 }: { account?: Pick<Account, "uuid" | "username" | "kind">; size?: number }) {
   const [bad, setBad] = useState(false);
@@ -67,12 +67,42 @@ export function PlayButton({ inst, big, className }: { inst: Instance; big?: boo
   const toast = useApp((s) => s.toast);
   const busy = !!prog && !prog.done;
   const hasAccount = !!inst.accountId || accounts.length > 0;
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const curAccount = inst.accountId || settings?.lastAccount || "";
 
   if (running) {
+    // more clients of the same build at once: each extra one signs in with its own account
+    const extra = (accountId: string) => api.launch(inst.id, accountId).catch((e) => toast("error", errText(e)));
     return (
-      <Button variant="danger" big={big} className={className} icon={<Square className="size-4" />} onClick={() => api.kill(inst.id)}>
-        {t("home.stop")}
-      </Button>
+      <div className="flex gap-2">
+        <Button variant="danger" big={big} className={className} icon={<Square className="size-4" />} onClick={() => api.kill(inst.id)}>
+          {t("home.stop")}
+        </Button>
+        {accounts.length > 0 && (
+          <Button
+            big={big}
+            icon={<Plus className="size-4" />}
+            title={t("home.extraHint")}
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setMenu({ x: r.left, y: r.bottom + 4 });
+            }}
+          >
+            {t("home.extra")}
+          </Button>
+        )}
+        {menu && (
+          <ContextMenu
+            x={menu.x}
+            y={menu.y}
+            onClose={() => setMenu(null)}
+            items={[...accounts]
+              // the account this build plays with goes first: a second game with the same account is one click
+              .sort((a, b) => Number(b.id === curAccount) - Number(a.id === curAccount))
+              .map((a) => ({ label: a.id === curAccount ? `${a.username} · ${t("home.sameAccount")}` : a.username, onClick: () => extra(a.id) }))}
+          />
+        )}
+      </div>
     );
   }
   const btn = (

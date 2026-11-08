@@ -225,8 +225,8 @@ export default function Settings() {
             </Field>
             <Field label={t("set.msClientId")} hint={t("set.msClientHint")}>
               <div className="flex gap-2">
-                <Input value={s.msClientId} placeholder="00000000-0000-0000-0000-000000000000" onChange={(e) => { patch({ msClientId: e.target.value.trim() }); setMsMsg(null); }} />
-                <Button loading={checking === "m"} onClick={async () => { setChecking("m"); try { setMsMsg(await api.checkMsClient(s.msClientId)); } finally { setChecking(""); } }}>{t("set.check")}</Button>
+                <Input value={s.msClientId} placeholder="b716b6d1-8542-438e-8f05-16a0c7671cd0" onChange={(e) => { patch({ msClientId: e.target.value.trim() }); setMsMsg(null); }} />
+                <Button loading={checking === "m"} onClick={async () => { setChecking("m"); try { setMsMsg(await api.checkMsClient(s.msClientId || "b716b6d1-8542-438e-8f05-16a0c7671cd0")); } finally { setChecking(""); } }}>{t("set.check")}</Button>
               </div>
               {msMsg && <p className={`text-sm mt-2 ${msMsg.ok ? "text-ok" : "text-bad"}`}>{msMsg.message}</p>}
               <button className="text-xs text-accent mt-2 hover:underline" onClick={() => openUrl("https://github.com/Hikaru220/nocturnum/blob/main/docs/MICROSOFT_AUTH.md")}>{t("set.msSetup")}</button>
@@ -244,6 +244,7 @@ export default function Settings() {
               </div>
             </div>
             <Button icon={<ExternalLink className="size-4" />} onClick={() => openUrl("https://github.com/Hikaru220/nocturnum")}>{t("set.github")}</Button>
+            <Licenses />
             <div>
               <div className="flex items-center justify-between mb-2">
                 <div className="font-semibold">{t("set.launcherLog")}</div>
@@ -254,6 +255,38 @@ export default function Settings() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function Licenses() {
+  const { t, toast } = useApp();
+  const [rows, setRows] = useState<{ slug: string; title: string; license: string; url: string }[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  return (
+    <div>
+      <div className="font-semibold mb-1">{t("set.buildAbout")}</div>
+      <div className="text-sm text-dim mb-2">{t("set.aboutHint")}</div>
+      {rows === null ? (
+        <Button
+          loading={loading}
+          onClick={() => {
+            setLoading(true);
+            api.buildLicenses().then(setRows).catch((e) => toast("error", errText(e))).finally(() => setLoading(false));
+          }}
+        >
+          {t("set.aboutShow")}
+        </Button>
+      ) : (
+        <div className="rounded-[12px] border border-line divide-y divide-line text-sm max-h-72 overflow-auto">
+          {rows.map((r) => (
+            <button key={r.slug} onClick={() => openUrl(r.url)} className="w-full flex justify-between gap-3 px-3 py-2 text-left hover:bg-surface-2">
+              <span className="font-semibold">{r.title}</span>
+              <span className="text-dim">{r.license}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

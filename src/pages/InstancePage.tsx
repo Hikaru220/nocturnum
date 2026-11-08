@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import {
   ArrowLeft, Check, Copy, FolderOpen, Image as ImageIcon, Layers, Package, Plus, RefreshCw, ScrollText, Settings2, Sparkles, Trash2, Wrench,
 } from "lucide-react";
-import { api, errText, type ContentFile, type HudStatus, type Instance, type JavaInfo, type UpdateInfo } from "../lib/api";
+import { api, errText, type Backup, type ContentFile, type HudStatus, type Instance, type JavaInfo, type UpdateInfo } from "../lib/api";
 import { formatBytes, formatPlayTime, useApp } from "../lib/store";
 import { Badge, Button, Card, Empty, Field, IconButton, Input, Modal, Select, Skeleton, Slider, Tabs, Toggle } from "../components/ui";
 import { InlineProgress, InstanceIcon, LoaderBadge, PlayButton, pickFiles } from "../components/shared";
@@ -364,6 +364,7 @@ function InstanceSettings({ inst }: { inst: Instance }) {
         <Field label={t("inst.rename")}>
           <Input value={draft.name} maxLength={48} onChange={(e) => patch({ name: e.target.value })} />
         </Field>
+        <BackupsField inst={inst} />
         <Field label={t("inst.memory")} hint={t("inst.memoryHint")}>
           <Slider value={Math.min(ram, maxRam)} min={1024} max={maxRam} step={512} onChange={(v) => patch({ ramMb: v })} format={(v) => `${(v / 1024).toFixed(1)} ГБ`} />
         </Field>
@@ -454,4 +455,46 @@ function pickChanged(next: Instance, base: Instance): Partial<Instance> {
   const out: Partial<Instance> = {};
   for (const k of keys) if (next[k] !== base[k]) (out as Record<string, unknown>)[k] = next[k];
   return out;
+}
+
+function BackupsField({ inst }: { inst: Instance }) {
+  const { t, toast, running } = useApp();
+  const [list, setList] = useState<Backup[]>([]);
+  const [busy, setBusy] = useState("");
+  const playing = running.includes(inst.id);
+  const load = () => api.listBackups(inst.id).then(setList).catch(() => {});
+  useEffect(() => {
+    load();
+  }, [inst.id]);
+  const act = async (key: string, fn: () => Promise<unknown>, ok: string) => {
+    setBusy(key);
+    try {
+      await fn();
+      toast("ok", ok);
+      await load();
+    } catch (e) {
+      toast("error", errText(e));
+    } finally {
+      setBusy("");
+    }
+  };
+  return (
+    <Field label={t("bak.title")} hint={t("bak.hint")}>
+      <div className="space-y-2">
+        <Button loading={busy === "new"} disabled={playing} onClick={() => act("new", () => api.createBackup(inst.id), t("bak.created"))}>
+          {t("bak.create")}
+        </Button>
+        {list.map((b) => (
+          <div key={b.fileName} className="flex items-center justify-between gap-2 text-sm">
+            <span className="truncate">
+              {new Date(b.created * 1000).toLocaleString()} · {(b.size / 1048576).toFixed(0)} МБ
+            </span>
+            <Button loading={busy === b.fileName} disabled={playing} onClick={() => act(b.fileName, () => api.restoreBackup(inst.id, b.fileName), t("bak.restored"))}>
+              {t("bak.restore")}
+            </Button>
+          </div>
+        ))}
+      </div>
+    </Field>
+  );
 }

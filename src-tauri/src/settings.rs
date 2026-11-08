@@ -70,7 +70,7 @@ impl Default for Settings {
             perf_tier: "auto".into(),
             install_optimization: true,
             high_priority: false,
-            allow_offline_unlicensed: true,
+            allow_offline_unlicensed: false, // Mojang application states: no offline login without a licence
         }
     }
 }
@@ -86,4 +86,13 @@ pub fn save(s: &Settings) -> R<()> {
     std::fs::create_dir_all(paths::root())?;
     std::fs::write(paths::settings_file(), serde_json::to_vec_pretty(s)?)?;
     Ok(())
+}
+
+/// Azure application (client) ID of Nocturnum for the Microsoft device-code sign-in. Public, not a secret:
+/// desktop app, no client secret and no redirect URI. A value typed into the settings overrides it.
+pub const DEFAULT_MS_CLIENT_ID: &str = "b716b6d1-8542-438e-8f05-16a0c7671cd0";
+
+pub fn ms_client_id() -> String {
+    let s = load();
+    if s.ms_client_id.trim().is_empty() { DEFAULT_MS_CLIENT_ID.to_string() } else { s.ms_client_id.trim().to_string() }
 }

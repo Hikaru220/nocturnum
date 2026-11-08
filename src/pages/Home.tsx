@@ -42,7 +42,7 @@ function SunShineBanner() {
         });
         await refreshInstances();
       }
-      await api.updateInstance({ ...inst, server: st?.address ?? "mc.sunshine-mc.ru:25864" });
+      await api.updateInstance({ ...inst, server: st?.address ?? "play.sunshine-mc.ru:30040" });
       await api.launch(inst.id);
     } catch (e) {
       toast("error", errText(e));

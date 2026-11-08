@@ -93,3 +93,23 @@ pub fn set_eco(pid: u32, on: bool) {
         }
     }
 }
+
+/// Freezes (or wakes) the hidden WebView2 so the sleeping launcher costs no CPU/RAM while the game runs.
+pub fn webview_suspend(w: &tauri::WebviewWindow, on: bool) {
+    let _ = w.with_webview(move |wv| unsafe {
+        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2_3;
+        use windows_core062::Interface as _;
+        let ctl = wv.controller();
+        let _ = ctl.SetIsVisible(!on);
+        if let Ok(core) = ctl.CoreWebView2() {
+            if let Ok(c3) = core.cast::<ICoreWebView2_3>() {
+                if on {
+                    let h = webview2_com::TrySuspendCompletedHandler::create(Box::new(|_, _| Ok(())));
+                    let _ = c3.TrySuspend(&h);
+                } else {
+                    let _ = c3.Resume();
+                }
+            }
+        }
+    });
+}

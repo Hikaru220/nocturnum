@@ -55,6 +55,18 @@ public final class Profiler {
     }
 
     /** Called by the /nocturnum perf command: first call starts, second call (or after 5 s) prints. */
+    /** `/nocturnum perf`: a 60 second spark profile when spark is installed (ТЗ 6.2), our own counters otherwise. */
+    public static void perfCommand() {
+        if (net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("spark")) {
+            var conn = net.minecraft.client.Minecraft.getInstance().getConnection();
+            if (conn != null) {
+                conn.sendCommand("sparkc profiler start --timeout 60");
+                return;
+            }
+        }
+        toggle();
+    }
+
     public static void toggle() {
         if (!on) {
             start();

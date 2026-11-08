@@ -3,7 +3,9 @@
 use serde::Serialize;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-pub const ADDRESS: &str = "mc.sunshine-mc.ru:25864";
+/// Public entrance of the server (BungeeCord proxy; the same host is 185.9.145.165:30040 by IP).
+pub const ADDRESS: &str = "play.sunshine-mc.ru:30040";
+const HOST_NAME: &str = "play.sunshine-mc.ru";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -39,7 +41,8 @@ async fn read_varint(s: &mut tokio::net::TcpStream) -> std::io::Result<u32> {
 }
 
 pub async fn ping() -> Option<Status> {
-    let (host, port) = ADDRESS.split_once(':')?;
+    let (_, port) = ADDRESS.split_once(':')?;
+    let host = HOST_NAME;
     let t0 = std::time::Instant::now();
     let work = async {
         let mut s = tokio::net::TcpStream::connect(ADDRESS).await?;

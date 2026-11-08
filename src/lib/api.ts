@@ -160,6 +160,21 @@ export interface NewInstanceReq {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Json = any;
 
+export interface Backup {
+  fileName: string;
+  created: number;
+  size: number;
+}
+
+export interface GalleryShot {
+  instanceId: string;
+  instanceName: string;
+  fileName: string;
+  path: string;
+  modified: number;
+  size: number;
+}
+
 export const api = {
   getSettings: () => invoke<Settings>("get_settings"),
   saveSettings: (settings: Settings) => invoke<void>("save_settings", { settings }),
@@ -188,12 +203,20 @@ export const api = {
     invoke<void>("toggle_content", { id, kind, file, enable }),
   removeContent: (id: string, kind: string, file: string) => invoke<void>("remove_content", { id, kind, file }),
   addContentFile: (id: string, kind: string, path: string) => invoke<string>("add_content_file", { id, kind, path }),
+  buildLicenses: () => invoke<{ slug: string; title: string; license: string; url: string }[]>("build_licenses"),
+  listBackups: (id: string) => invoke<Backup[]>("list_backups", { id }),
+  createBackup: (id: string) => invoke<string | null>("create_backup", { id }),
+  restoreBackup: (id: string, fileName: string) => invoke<void>("restore_backup", { id, fileName }),
+  galleryList: () => invoke<GalleryShot[]>("gallery_list"),
+  screenshotThumb: (path: string) => invoke<string>("screenshot_thumb", { path }),
+  screenshotFull: (path: string) => invoke<string>("screenshot_full", { path }),
+  deleteScreenshot: (path: string) => invoke<void>("delete_screenshot", { path }),
   listScreenshots: (id: string) => invoke<string[]>("list_screenshots", { id }),
   readOptions: (id: string) => invoke<string>("read_options", { id }),
 
   installInstance: (id: string) => invoke<void>("install_instance", { id }),
   repairInstance: (id: string) => invoke<void>("repair_instance", { id }),
-  launch: (id: string) => invoke<void>("launch_instance", { id }),
+  launch: (id: string, accountId?: string) => invoke<void>("launch_instance", { id, accountId }),
   kill: (id: string) => invoke<void>("kill_instance", { id }),
   cancelLaunch: (id: string) => invoke<void>("cancel_launch", { id }),
   running: () => invoke<string[]>("running_instances"),

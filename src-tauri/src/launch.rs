@@ -141,7 +141,7 @@ pub struct Prepared {
 }
 
 pub async fn prepare(app: &AppHandle, inst: &Instance, st: &Settings, pid: &str) -> R<Prepared> {
-    let session = auth::session_for(&inst.account_id, &st.ms_client_id).await?;
+    let session = auth::session_for(&inst.account_id, &settings::ms_client_id()).await?;
     let resolved = versions::resolve(&inst.version_id).await?;
     let major = versions::required_java_major(&resolved);
 
@@ -359,9 +359,23 @@ pub async fn ensure_installed(app: &AppHandle, inst: &mut Instance, st: &Setting
     Ok(())
 }
 
-pub async fn launch(app: AppHandle, instance_id: String) -> R<()> {
-    if RUNNING.lock().unwrap().contains_key(&instance_id) {
+/// Run keys of one build: `id` for the first client, `id~2`, `id~3`... for extra clients (other accounts).
+pub fn run_keys(id: &str) -> Vec<String> {
+    let pre = format!("{id}~");
+    RUNNING.lock().unwrap().keys().filter(|k| k.as_str() == id || k.starts_with(&pre)).cloned().collect()
+}
+
+pub fn is_running(id: &str) -> bool {
+    !run_keys(id).is_empty()
+}
+
+/// Several clients at once: a second launch of a running build needs its own account.
+pub async fn launch(app: AppHandle, instance_id: String, account_override: Option<String>) -> R<()> {
+    if is_running(&instance_id) && account_override.is_none() {
         return Err(anyhow!("Игра уже запущена").into());
+    }
+    if run_keys(&instance_id).len() >= 4 {
+        return Err(anyhow!("Одновременно можно запустить не больше 4 клиентов одной сборки").into());
     }
     let st = settings::load();
     let mut inst = instances::get(&instance_id)?;
@@ -375,7 +389,7 @@ pub async fn launch(app: AppHandle, instance_id: String) -> R<()> {
     let stop = std::sync::Arc::new(tokio::sync::Notify::new());
     CANCEL.lock().unwrap().insert(instance_id.clone(), stop.clone());
     let result = tokio::select! {
-        r = launch_inner(&app, &mut inst, &st, &pid) => r,
+        r = launch_inner(&app, &mut inst, &st, &pid, account_override) => r,
         _ = stop.notified() => Err(anyhow!("Запуск отменён").into()),
     };
     CANCEL.lock().unwrap().remove(&instance_id);
@@ -385,9 +399,14 @@ pub async fn launch(app: AppHandle, instance_id: String) -> R<()> {
     result
 }
 
-async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: &str) -> R<()> {
+async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: &str, account_override: Option<String>) -> R<()> {
     rpc::set(rpc::State::Launching { mc: inst.mc_version.clone(), loader: inst.loader.clone(), name: inst.name.clone() });
     ensure_installed(app, inst, st, pid).await?;
+    // the account of an extra client is used for this run only and never saved into the build
+    let extra = account_override.is_some();
+    if let Some(a) = account_override {
+        inst.account_id = a;
+    }
     net::emit_progress(app, pid, "Запуск игры", 100.0, 0.0, false, None);
     let prepared = prepare(app, inst, st, pid).await?;
 
@@ -430,18 +449,35 @@ async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: 
     if st.high_priority {
         set_high_priority(child_pid);
     }
-    RUNNING.lock().unwrap().insert(inst.id.clone(), Running { pid: child_pid });
-    LOGS.lock().unwrap().insert(inst.id.clone(), VecDeque::new());
+    let key = {
+        let mut r = RUNNING.lock().unwrap();
+        let mut k = inst.id.clone();
+        let mut n = 2;
+        while r.contains_key(&k) {
+            k = format!("{}~{n}", inst.id);
+            n += 1;
+        }
+        r.insert(k.clone(), Running { pid: child_pid });
+        k
+    };
+    if !extra {
+        LOGS.lock().unwrap().insert(inst.id.clone(), VecDeque::new());
+    }
     net::emit_progress(app, pid, "Игра запущена", 100.0, 0.0, true, None);
     let _ = app.emit("game-started", inst.id.clone());
     if st.minimize_on_launch {
         if let Some(w) = app.get_webview_window("main") {
             let _ = w.hide();
+            #[cfg(windows)]
+            crate::winapi::webview_suspend(&w, true);
         }
     }
 
     inst.last_played = instances::now();
-    instances::save(inst)?;
+    if let Ok(mut disk) = instances::get(&inst.id) {
+        disk.last_played = inst.last_played;
+        instances::save(&disk)?;
+    }
 
     let started = std::time::Instant::now();
     let started_unix = chrono::Utc::now().timestamp();
@@ -505,22 +541,30 @@ async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: 
     for r in readers {
         let _ = r.await;
     }
-    RUNNING.lock().unwrap().remove(&id);
+    RUNNING.lock().unwrap().remove(&key);
+    let others = is_running(&id); // other clients of this build still alive
+    let all_done = RUNNING.lock().unwrap().is_empty();
     let code = status.code().unwrap_or(-1);
     let secs = started.elapsed().as_secs();
     if let Ok(mut i) = instances::get(&id) {
         i.play_time_secs += secs;
         let _ = instances::save(&i);
     }
-    #[cfg(windows)]
-    crate::winapi::set_eco(0, false);
-    rpc::set(rpc::State::Launcher);
-    if let Some(w) = app.get_webview_window("main") {
-        let _ = w.show();
-        let _ = w.set_focus();
+    if all_done {
+        #[cfg(windows)]
+        crate::winapi::set_eco(0, false);
+        rpc::set(rpc::State::Launcher);
+        if let Some(w) = app.get_webview_window("main") {
+            #[cfg(windows)]
+            crate::winapi::webview_suspend(&w, false);
+            let _ = w.show();
+            let _ = w.set_focus();
+        }
     }
-    let hint = if code != 0 { analyze_crash(&id, &get_log(&id)) } else { None };
-    let _ = app.emit("game-exit", GameExit { instance_id: id.clone(), code, hint });
+    if !others {
+        let hint = if code != 0 { analyze_crash(&id, &get_log(&id)) } else { None };
+        let _ = app.emit("game-exit", GameExit { instance_id: id.clone(), code, hint });
+    }
     Ok(())
 }
 
@@ -561,7 +605,7 @@ fn set_high_priority(_pid: u32) {}
 
 /// Stops a launch that is still downloading/preparing, or kills the running game.
 pub fn cancel(id: &str) -> R<()> {
-    if RUNNING.lock().unwrap().contains_key(id) {
+    if is_running(id) {
         return kill(id);
     }
     if let Some(n) = CANCEL.lock().unwrap().get(id) {
@@ -571,8 +615,11 @@ pub fn cancel(id: &str) -> R<()> {
 }
 
 pub fn kill(id: &str) -> R<()> {
-    let pid = RUNNING.lock().unwrap().get(id).map(|r| r.pid);
-    if let Some(pid) = pid {
+    let pids: Vec<u32> = {
+        let r = RUNNING.lock().unwrap();
+        run_keys(id).iter().filter_map(|k| r.get(k).map(|x| x.pid)).collect()
+    };
+    for pid in pids {
         #[cfg(windows)]
         {
             crate::winapi::kill_process(pid);

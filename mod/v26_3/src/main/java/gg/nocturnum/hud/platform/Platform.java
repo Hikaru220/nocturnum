@@ -137,6 +137,8 @@ public final class Platform {
         mc.gui.setScreen(new net.minecraft.client.gui.screens.options.OptionsScreen(mc.gui.screen(), mc.options));
     }
 
+    public static void addWidget(net.minecraft.client.gui.screens.Screen screen, net.minecraft.client.gui.components.Button b) { net.fabricmc.fabric.api.client.screen.v1.Screens.getWidgets(screen).add(b); }
+
     public static void quit() { Minecraft.getInstance().stop(); }
 
     public static String gameVersion() { return net.minecraft.SharedConstants.getCurrentVersion().name(); }
@@ -282,7 +284,7 @@ public final class Platform {
         net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, registry) ->
             dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("nocturnum")
                 .then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("perf").executes(c -> {
-                    gg.nocturnum.hud.util.Profiler.toggle();
+                    gg.nocturnum.hud.util.Profiler.perfCommand();
                     return 1;
                 }))));
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {

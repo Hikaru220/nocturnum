@@ -8,6 +8,7 @@ public final class NocturnumClient implements ClientModInitializer {
     public void onInitializeClient() {
         Hud.registerModules();
         Platform.init();
+        gg.nocturnum.hud.module.AutoReconnect.init();
         Platform.log("Nocturnum HUD loaded");
     }
 }

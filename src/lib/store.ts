@@ -18,6 +18,7 @@ export type Route =
   | { page: "instance"; id: string; tab?: string }
   | { page: "catalog"; query?: string; type?: string; instanceId?: string; project?: string }
   | { page: "skins" }
+  | { page: "shots" }
   | { page: "accounts" }
   | { page: "settings" };
 

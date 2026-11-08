@@ -18,7 +18,7 @@ pub const LITHIUM: &str = "gvQqBUqZ";
 
 /// Layer 1 of the optimisation stack (ТЗ пакет 2, п. 7.1): original files from Modrinth, never bundled.
 /// ТЗ 7.2: ready-made mods that replace our own functions (minimap, zoom, chat, F3 info, skins, status effects).
-pub const READY_MOD_SLUGS: &[&str] = &["xaeros-minimap", "xaeros-world-map", "zoomify", "chatpatches", "chat-heads", "appleskin", "status-effect-bars", "minihud", "betterf3", "3dskinlayers", "not-enough-animations", "wavey-capes", "modmenu"];
+pub const READY_MOD_SLUGS: &[&str] = &["fabric-language-kotlin", "yacl", "cloth-config", "xaeros-minimap", "xaeros-world-map", "zoomify", "chatpatches", "chat-heads", "appleskin", "status-effect-bars", "minihud", "betterf3", "3dskinlayers", "not-enough-animations", "wavey-capes", "modmenu"];
 
 pub const OPTIMIZATION_SLUGS: &[&str] = &["sodium", "sodium-extra", "lithium", "ferrite-core", "modernfix", "immediatelyfast", "entityculling", "moreculling", "badoptimizations", "dynamic-fps", "spark"];
 
@@ -122,5 +122,112 @@ pub async fn install(app: &AppHandle, inst: &Instance) -> R<()> {
             }
         }
     }
+    // safety net: required `depends` from every jar's fabric.mod.json must be present
+    fix_missing_deps(app, &pid, inst).await;
     Ok(())
+}
+
+/// Mod ids a jar provides (own id, `provides`, nested jars) and ids it requires.
+fn scan_jar(path: &std::path::Path, provided: &mut std::collections::HashSet<String>, required: &mut std::collections::HashSet<String>, depth: u8) {
+    let Ok(f) = std::fs::File::open(path) else { return };
+    let Ok(mut z) = zip::ZipArchive::new(f) else { return };
+    scan_zip(&mut z, provided, required, depth);
+}
+
+fn scan_zip<R: std::io::Read + std::io::Seek>(z: &mut zip::ZipArchive<R>, provided: &mut std::collections::HashSet<String>, required: &mut std::collections::HashSet<String>, depth: u8) {
+    use std::io::Read;
+    let json: Option<Value> = z.by_name("fabric.mod.json").ok().and_then(|mut e| {
+        let mut s = String::new();
+        e.read_to_string(&mut s).ok()?;
+        serde_json::from_str(s.trim_start_matches('\u{feff}')).ok()
+    });
+    if let Some(j) = json {
+        if let Some(id) = j["id"].as_str() {
+            provided.insert(id.to_string());
+        }
+        for p in j["provides"].as_array().into_iter().flatten().filter_map(|x| x.as_str()) {
+            provided.insert(p.to_string());
+        }
+        if let Some(d) = j["depends"].as_object() {
+            for k in d.keys() {
+                required.insert(k.clone());
+            }
+        }
+        if depth < 2 {
+            let nested: Vec<String> = j["jars"].as_array().into_iter().flatten().filter_map(|x| x["file"].as_str().map(String::from)).collect();
+            for n in nested {
+                let bytes = z.by_name(&n).ok().and_then(|mut e| {
+                    let mut b = Vec::new();
+                    e.read_to_end(&mut b).ok()?;
+                    Some(b)
+                });
+                if let Some(b) = bytes {
+                    if let Ok(mut nz) = zip::ZipArchive::new(std::io::Cursor::new(b)) {
+                        scan_zip(&mut nz, provided, required, depth + 1);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Missing ids that are not real downloadable mods (platform / bundled API modules).
+fn builtin_dep(id: &str) -> bool {
+    matches!(id, "minecraft" | "java" | "fabricloader" | "fabric" | "quilt_loader" | "fabric-api") || (id.starts_with("fabric-") && !id.starts_with("fabric-language-"))
+}
+
+/// Up to three passes: find required mod ids no installed jar provides, install them from Modrinth by id/slug.
+/// Anything that cannot be resolved is skipped quietly (the mod just stays unsatisfied), never an error.
+async fn fix_missing_deps(app: &AppHandle, pid: &str, inst: &Instance) {
+    let mods = instances::game_dir(&inst.id).join("mods");
+    let mut tried: std::collections::HashSet<String> = Default::default();
+    for _ in 0..3 {
+        let mut provided = Default::default();
+        let mut required = Default::default();
+        if let Ok(rd) = std::fs::read_dir(&mods) {
+            for e in rd.flatten() {
+                let p = e.path();
+                if p.extension().map(|x| x == "jar").unwrap_or(false) {
+                    scan_jar(&p, &mut provided, &mut required, 0);
+                }
+            }
+        }
+        let missing: Vec<String> = required.iter().filter(|r| !provided.contains(*r) && !builtin_dep(r) && !tried.contains(*r)).cloned().collect();
+        if missing.is_empty() {
+            return;
+        }
+        for id in missing {
+            tried.insert(id.clone());
+            let Ok(p) = modrinth::project(&id).await else { continue };
+            let Some(proj) = p["id"].as_str() else { continue };
+            match modrinth::install_project(app, pid, inst, proj, None, "mod").await {
+                Ok(_) => crate::net::emit_progress(app, pid, &format!("{id}: докачана зависимость"), 0.0, 0.0, false, None),
+                Err(e) => crate::net::emit_progress(app, pid, &format!("{id}: зависимость пропущена ({e})"), 0.0, 0.0, false, None),
+            }
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LicenseRow {
+    pub slug: String,
+    pub title: String,
+    pub license: String,
+    pub url: String,
+}
+
+/// "About the build": title and licence of every bundled third-party mod, straight from Modrinth.
+pub async fn licenses() -> Vec<LicenseRow> {
+    let all: Vec<&str> = OPTIMIZATION_SLUGS.iter().chain(READY_MOD_SLUGS.iter()).copied().collect();
+    let futs = all.iter().map(|slug| async move {
+        let p = modrinth::project(slug).await.ok()?;
+        Some(LicenseRow {
+            slug: slug.to_string(),
+            title: p["title"].as_str().unwrap_or(slug).to_string(),
+            license: p["license"]["name"].as_str().or(p["license"]["id"].as_str()).unwrap_or("?").to_string(),
+            url: format!("https://modrinth.com/mod/{slug}"),
+        })
+    });
+    futures_util::future::join_all(futs).await.into_iter().flatten().collect()
 }

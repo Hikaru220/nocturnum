@@ -12,7 +12,7 @@ export function installMock() {
     windowWidth: 854, windowHeight: 480, fullscreen: false, discreteGpu: false, discordRpc: true, rpcHideServer: false,
     rpcHideInstance: false, applyPreset: true, installSodium: true, installHud: true, minimizeOnLaunch: true,
     downloadsThreads: 12, firstRunDone: true, lastInstance: "survival", lastAccount: "a1", background: "", reduceMotion: false,
-    msClientId: "", discordAppId: "", perfTier: "auto", installOptimization: true, highPriority: true, allowOfflineUnlicensed: true,
+    msClientId: "", discordAppId: "", perfTier: "auto", installOptimization: true, highPriority: true, allowOfflineUnlicensed: false,
   };
   const mk = (id: string, name: string, mc: string, loader: string, extra: any = {}) => ({
     id, name, mcVersion: mc, loader, loaderVersion: "0.20.1", versionId: "", installed: true, ramMb: 0, javaPath: "", jvmArgs: "",
@@ -56,6 +56,9 @@ export function installMock() {
     mr_project: (a) => ({ id: a.id, title: "Sodium", description: "Оптимизация рендера", downloads: 40000000, icon_url: null, gallery: [], loaders: ["fabric", "quilt"], project_type: "mod", slug: "sodium" }),
     mr_versions: () => [{ id: "v1", name: "Sodium 0.6.0", version_number: "0.6.0", game_versions: ["1.21.11"], loaders: ["fabric"], version_type: "release" }],
     skin_library: () => [],
+    gallery_list: () => [],
+    list_backups: () => [],
+    build_licenses: () => [],
     check_updates: () => [],
     mr_check_updates: () => [],
   };

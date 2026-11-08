@@ -191,7 +191,7 @@ async fn minecraft_login(ms_access: &str) -> R<(String, Value)> {
     if !st.is_success() {
         if text.contains("Invalid app registration") {
             return Err(anyhow!(
-                "Microsoft-приложение не одобрено Mojang («Invalid app registration»). См. docs/MICROSOFT_AUTH.md."
+                "Вход с лицензией пока недоступен: Mojang ещё не одобрил приложение Nocturnum («Invalid app registration»). Как только заявку одобрят, вход заработает без обновления."
             )
             .into());
         }

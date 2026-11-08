@@ -14,7 +14,9 @@ mod modrinth;
 mod net;
 mod paths;
 mod rpc;
+mod backups;
 mod settings;
+mod shots;
 mod skins;
 mod versions;
 
@@ -130,6 +132,49 @@ fn open_path(path: String) -> R<()> {
 }
 
 #[tauri::command]
+fn gallery_list() -> Vec<shots::Shot> {
+    shots::list()
+}
+
+#[tauri::command]
+async fn screenshot_thumb(path: String) -> R<String> {
+    tauri::async_runtime::spawn_blocking(move || shots::thumb(&path)).await.map_err(|e| anyhow::anyhow!("{e}"))?
+}
+
+#[tauri::command]
+async fn screenshot_full(path: String) -> R<String> {
+    tauri::async_runtime::spawn_blocking(move || shots::full(&path)).await.map_err(|e| anyhow::anyhow!("{e}"))?
+}
+
+#[tauri::command]
+fn delete_screenshot(path: String) -> R<()> {
+    shots::delete(&path)
+}
+
+#[tauri::command]
+async fn build_licenses() -> Vec<hud::LicenseRow> {
+    hud::licenses().await
+}
+
+#[tauri::command]
+fn list_backups(id: String) -> Vec<backups::Backup> {
+    backups::list(&id)
+}
+
+#[tauri::command]
+async fn create_backup(id: String) -> R<Option<String>> {
+    tauri::async_runtime::spawn_blocking(move || backups::create(&id)).await.map_err(|e| anyhow::anyhow!("{e}"))?
+}
+
+#[tauri::command]
+async fn restore_backup(id: String, file_name: String) -> R<()> {
+    if launch::is_running(&id) {
+        return Err(anyhow::anyhow!("Сначала закройте игру").into());
+    }
+    tauri::async_runtime::spawn_blocking(move || backups::restore(&id, &file_name)).await.map_err(|e| anyhow::anyhow!("{e}"))?
+}
+
+#[tauri::command]
 fn read_file_data_url(path: String) -> R<String> {
     use base64::Engine;
     let bytes = std::fs::read(&path)?;
@@ -236,7 +281,7 @@ fn update_instance(instance: Instance) -> R<()> {
 
 #[tauri::command]
 fn delete_instance(id: String) -> R<()> {
-    if launch::RUNNING.lock().unwrap().contains_key(&id) {
+    if launch::is_running(&id) {
         return Err(anyhow::anyhow!("Сначала закройте игру").into());
     }
     instances::delete(&id)
@@ -337,14 +382,14 @@ async fn repair_instance(app: AppHandle, id: String) -> R<()> {
 }
 
 #[tauri::command]
-async fn launch_instance(app: AppHandle, id: String) -> R<()> {
+async fn launch_instance(app: AppHandle, id: String, account_id: Option<String>) -> R<()> {
     let mut st = settings::load();
     st.last_instance = id.clone();
     let _ = settings::save(&st);
     let app2 = app.clone();
     tauri::async_runtime::spawn(async move {
         let pid = format!("launch:{id}");
-        let res = launch::launch(app2.clone(), id.clone()).await;
+        let res = launch::launch(app2.clone(), id.clone(), account_id).await;
         if let Err(e) = res {
             applog(&format!("launch {id} failed: {e}"));
             net::emit_progress(&app2, &pid, "Ошибка", 0.0, 0.0, true, Some(e.0));
@@ -368,7 +413,10 @@ fn kill_instance(id: String) -> R<()> {
 
 #[tauri::command]
 fn running_instances() -> Vec<String> {
-    launch::RUNNING.lock().unwrap().keys().cloned().collect()
+    let mut v: Vec<String> = launch::RUNNING.lock().unwrap().keys().map(|k| k.split('~').next().unwrap_or(k).to_string()).collect();
+    v.sort();
+    v.dedup();
+    v
 }
 
 #[tauri::command]
@@ -410,8 +458,7 @@ fn list_accounts() -> Vec<auth::Account> {
 
 #[tauri::command]
 async fn login_microsoft(app: AppHandle) -> R<auth::Account> {
-    let st = settings::load();
-    let r = auth::login_microsoft(&app, &st.ms_client_id).await;
+    let r = auth::login_microsoft(&app, &settings::ms_client_id()).await;
     if let Err(e) = &r {
         applog(&format!("ms login failed: {e}"));
     }
@@ -501,6 +548,8 @@ async fn mr_check_updates(instance_id: String) -> R<Vec<modrinth::UpdateInfo>> {
 #[tauri::command]
 async fn mr_update_all(app: AppHandle, instance_id: String) -> R<usize> {
     let inst = instances::get(&instance_id)?;
+    let bid = inst.id.clone();
+    let _ = tauri::async_runtime::spawn_blocking(move || backups::create(&bid)).await; // safety copy first
     modrinth::update_all(&app, &format!("update:{instance_id}"), &inst).await
 }
 
@@ -591,6 +640,8 @@ async fn update_modpack(app: AppHandle, id: String) -> R<bool> {
     let file = latest["files"].as_array().and_then(|f| f.first()).cloned().ok_or_else(|| anyhow::anyhow!("Нет файла"))?;
     let tmp = paths::cache_dir().join(format!("{}.mrpack", inst.modpack_project));
     net::download_file(file["url"].as_str().unwrap_or(""), &tmp, &net::Hash::None, None).await?;
+    let bid = id.clone();
+    let _ = tauri::async_runtime::spawn_blocking(move || backups::create(&bid)).await; // safety copy first
     let st = settings::load();
     let pid = format!("modpack:update:{id}");
     modrinth::apply_mrpack(&app, &pid, &inst, &tmp, true, st.downloads_threads as usize).await?;
@@ -699,8 +750,7 @@ fn skin_delete(name: String) -> R<()> {
 async fn skin_upload(account_id: String, data_url: String, slim: bool) -> R<()> {
     let png = decode_png(&data_url)?;
     skins::check_png(&png)?;
-    let st = settings::load();
-    auth::upload_skin(&account_id, &st.ms_client_id, png, slim).await
+    auth::upload_skin(&account_id, &settings::ms_client_id(), png, slim).await
 }
 
 // ---------- startup / tray ----------
@@ -814,6 +864,14 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_settings,
+            gallery_list,
+            list_backups,
+            build_licenses,
+            create_backup,
+            restore_backup,
+            screenshot_thumb,
+            screenshot_full,
+            delete_screenshot,
             save_settings,
             system_info,
             hardware_info,
@@ -896,6 +954,10 @@ async fn selftest_run(app: AppHandle, mc: String, loader: String) -> i32 {
     say!("loader version: {lv}");
     // offline account (bypasses licence check on purpose, test only)
     let acc = auth::Account { id: "selftest".into(), kind: "offline".into(), username: "Selftest".into(), uuid: auth::offline_uuid("Selftest"), skin_url: String::new() };
+    if std::env::var("NOCTURNUM_HOME").map(|v| v.trim().is_empty()).unwrap_or(true) {
+        say!("SELFTEST FAIL: set NOCTURNUM_HOME to an empty folder first (the test writes its own accounts.json)");
+        return 1;
+    }
     let _ = std::fs::create_dir_all(paths::root());
     std::fs::write(paths::accounts_file(), serde_json::to_vec(&serde_json::json!({"accounts": [acc]})).unwrap()).unwrap();
     let hud_on = std::env::args().any(|a| a == "hud");
@@ -921,7 +983,7 @@ async fn selftest_run(app: AppHandle, mc: String, loader: String) -> i32 {
     let finished = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let fin2 = finished.clone();
     tauri::async_runtime::spawn(async move {
-        if let Err(e) = launch::launch(app2, id).await {
+        if let Err(e) = launch::launch(app2, id, None).await {
             println!("LAUNCH ERROR: {}", e);
         }
         fin2.store(true, std::sync::atomic::Ordering::SeqCst);

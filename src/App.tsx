@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { ChevronsUpDown, Globe, Home as HomeIcon, Library as LibIcon, Plus, Search, Settings as SettingsIcon, Shirt, Users } from "lucide-react";
+import { Camera, ChevronsUpDown, Globe, Home as HomeIcon, Library as LibIcon, Plus, Search, Settings as SettingsIcon, Shirt, Users } from "lucide-react";
 import { api, errText } from "./lib/api";
 import { useApp } from "./lib/store";
 import { cx, ContextMenu, Toasts, Spinner } from "./components/ui";
@@ -12,6 +12,7 @@ import Library from "./pages/Library";
 import InstancePage from "./pages/InstancePage";
 import Catalog from "./pages/Catalog";
 import Skins from "./pages/Skins";
+import Shots from "./pages/Shots";
 import Accounts from "./pages/Accounts";
 import Settings from "./pages/Settings";
 
@@ -91,6 +92,7 @@ export default function App() {
       case "instance": return <InstancePage key={route.id} id={route.id} initialTab={route.tab} />;
       case "catalog": return <Catalog key={`${route.query}|${route.type}|${route.instanceId}|${route.project}`} initialQuery={route.query} initialType={route.type} initialInstance={route.instanceId} initialProject={route.project} />;
       case "skins": return <Skins />;
+      case "shots": return <Shots />;
       case "accounts": return <Accounts />;
       case "settings": return <Settings />;
     }
@@ -126,6 +128,7 @@ function Sidebar() {
     { page: "library", icon: LibIcon, label: t("nav.library") },
     { page: "catalog", icon: Globe, label: t("nav.catalog") },
     { page: "skins", icon: Shirt, label: t("nav.skins") },
+    { page: "shots", icon: Camera, label: t("nav.shots") },
     { page: "accounts", icon: Users, label: t("nav.accounts") },
   ] as const;
   const active = route.page === "instance" ? "library" : route.page;
