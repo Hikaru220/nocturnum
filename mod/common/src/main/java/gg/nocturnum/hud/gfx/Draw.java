@@ -17,15 +17,18 @@ public final class Draw {
         return r - (float) Math.sqrt(Math.max(0, s));
     }
 
-    private static void span(Gfx g, int y, float left, float right, int color) {
-        if (right <= left) return;
+    private static void span(Gfx g, int y, float left, float right, int color) { spanH(g, y, y + 1, left, right, color); }
+
+    /** Same span for rows y0..y1 in one go (identical rows are merged into a single quad). */
+    private static void spanH(Gfx g, int y0, int y1, float left, float right, int color) {
+        if (right <= left || y1 <= y0) return;
         int l = (int) Math.ceil(left);
         int rr = (int) Math.floor(right);
-        if (rr > l) g.fill(l, y, rr, y + 1, color);
+        if (rr > l) g.fill(l, y0, rr, y1, color);
         float lf = l - left; // partial pixel at the left edge
-        if (lf > 0.02f) g.fill(l - 1, y, l, y + 1, Colors.mulAlpha(color, lf));
+        if (lf > 0.02f) g.fill(l - 1, y0, l, y1, Colors.mulAlpha(color, lf));
         float rf = right - rr;
-        if (rf > 0.02f) g.fill(rr, y, rr + 1, y + 1, Colors.mulAlpha(color, rf));
+        if (rf > 0.02f) g.fill(rr, y0, rr + 1, y1, Colors.mulAlpha(color, rf));
     }
 
     public static void rect(Gfx g, float x, float y, float w, float h, float r, int color) {
@@ -37,9 +40,13 @@ public final class Draw {
         }
         int rows = Math.round(h);
         int y0 = Math.round(y);
-        for (int i = 0; i < rows; i++) {
+        int i = 0;
+        while (i < rows) {
             float in = inset(i + 0.5f, rows, r);
-            span(g, y0 + i, x + in, x + w - in, color);
+            int j = i + 1;
+            while (j < rows && inset(j + 0.5f, rows, r) == in) j++;
+            spanH(g, y0 + i, y0 + j, x + in, x + w - in, color);
+            i = j;
         }
     }
 
@@ -83,16 +90,28 @@ public final class Draw {
         int rows = Math.round(h);
         int y0 = Math.round(y);
         float ir = Math.max(0, r - t);
-        for (int i = 0; i < rows; i++) {
+        int i = 0;
+        while (i < rows) {
             float o = inset(i + 0.5f, rows, r);
-            if (i < t || i >= rows - t) {
-                span(g, y0 + i, x + o, x + w - o, color);
-            } else {
-                float in = t + inset(i - t + 0.5f, rows - 2 * t, ir);
-                float edge = Math.max(in, o);
-                span(g, y0 + i, x + o, x + edge, color);
-                span(g, y0 + i, x + w - edge, x + w - o, color);
+            boolean cap = i < t || i >= rows - t;
+            float edge = o;
+            if (!cap) edge = Math.max(t + inset(i - t + 0.5f, rows - 2 * t, ir), o);
+            int j = i + 1;
+            while (j < rows) {
+                float o2 = inset(j + 0.5f, rows, r);
+                boolean cap2 = j < t || j >= rows - t;
+                float e2 = o2;
+                if (!cap2) e2 = Math.max(t + inset(j - t + 0.5f, rows - 2 * t, ir), o2);
+                if (cap2 != cap || o2 != o || e2 != edge) break;
+                j++;
             }
+            if (cap) {
+                spanH(g, y0 + i, y0 + j, x + o, x + w - o, color);
+            } else {
+                spanH(g, y0 + i, y0 + j, x + o, x + edge, color);
+                spanH(g, y0 + i, y0 + j, x + w - edge, x + w - o, color);
+            }
+            i = j;
         }
     }
 
@@ -122,12 +141,33 @@ public final class Draw {
         float len = (float) Math.sqrt(dx * dx + dy * dy);
         if (len > 4000 || Float.isNaN(len)) return;
         if (Math.max(Math.max(x1, x2), Math.max(y1, y2)) < -50 || Math.min(Math.min(x1, x2), Math.min(y1, y2)) > 6000) return;
-        int steps = Math.max(1, (int) Math.ceil(len));
-        float h = Math.max(1f, thick);
-        for (int i = 0; i <= steps; i++) {
-            float t = i / (float) steps;
-            int x = Math.round(x1 + dx * t - h / 2f), y = Math.round(y1 + dy * t - h / 2f);
-            g.fill(x, y, x + Math.round(h), y + Math.round(h), color);
+        int h = Math.max(1, Math.round(Math.max(1f, thick)));
+        float half = h / 2f;
+        // one quad per row (or column) instead of one per pixel
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            int ya = Math.round(Math.min(y1, y2) - half), yb = Math.round(Math.max(y1, y2) - half);
+            if (yb == ya) {
+                g.fill(Math.round(Math.min(x1, x2) - half), ya, Math.round(Math.max(x1, x2) - half) + h, ya + h, color);
+                return;
+            }
+            float slope = dx / dy;
+            for (int y = ya; y <= yb; y++) {
+                float c0 = x1 + (y + half - y1) * slope, c1 = x1 + (y + 1 + half - y1) * slope;
+                float lo = Math.max(Math.min(x1, x2), Math.min(c0, c1)), hi = Math.min(Math.max(x1, x2), Math.max(c0, c1));
+                g.fill(Math.round(lo - half), y, Math.round(hi - half) + h, y + h, color);
+            }
+        } else {
+            int xa = Math.round(Math.min(x1, x2) - half), xb = Math.round(Math.max(x1, x2) - half);
+            if (xb == xa) {
+                g.fill(xa, Math.round(Math.min(y1, y2) - half), xa + h, Math.round(Math.max(y1, y2) - half) + h, color);
+                return;
+            }
+            float slope = dy / dx;
+            for (int x = xa; x <= xb; x++) {
+                float c0 = y1 + (x + half - x1) * slope, c1 = y1 + (x + 1 + half - x1) * slope;
+                float lo = Math.max(Math.min(y1, y2), Math.min(c0, c1)), hi = Math.min(Math.max(y1, y2), Math.max(c0, c1));
+                g.fill(x, Math.round(lo - half), x + h, Math.round(hi - half) + h, color);
+            }
         }
     }
 

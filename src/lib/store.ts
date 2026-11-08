@@ -125,8 +125,9 @@ export const useApp = create<State>((set, get) => ({
         if (p.error) get().toast("error", p.error);
       }
     });
-    await listen<string>("game-started", (e) => set((s) => ({ running: [...new Set([...s.running, e.payload])] })));
+    await listen<string>("game-started", (e) => { document.documentElement.classList.add("frozen"); set((s) => ({ running: [...new Set([...s.running, e.payload])] })); });
     await listen<GameExit>("game-exit", (e) => {
+      document.documentElement.classList.remove("frozen");
       set((s) => ({ running: s.running.filter((r) => r !== e.payload.instanceId) }));
       get().refreshInstances();
       if (e.payload.code !== 0) set({ crash: e.payload });

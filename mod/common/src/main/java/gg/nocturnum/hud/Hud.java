@@ -7,6 +7,7 @@ import gg.nocturnum.hud.module.*;
 import gg.nocturnum.hud.platform.Platform;
 import gg.nocturnum.hud.ui.ClickGuiView;
 import gg.nocturnum.hud.util.Easing;
+import gg.nocturnum.hud.util.Profiler;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -96,6 +97,10 @@ public final class Hud {
             }
             if (debugTicks > open - 90 && debugTicks <= open + 58) Game.player().setYRot(Game.player().getYRot() + 6f);
         }
+        if (d.contains("perf")) {
+            if (debugTicks == 300) gg.nocturnum.hud.util.Profiler.start();
+            if (debugTicks == 700) gg.nocturnum.hud.util.Profiler.toggle();
+        }
         if (d.contains("menuclick")) {
             var v = Platform.currentView();
             if (debugTicks > 150 && debugTicks % 40 == 0 && v instanceof gg.nocturnum.hud.ui.MainMenuView) {
@@ -115,11 +120,13 @@ public final class Hud {
         boolean inGame = Game.inWorld();
         for (Module m : Config.modules()) {
             if (m.enabled()) {
+                long t0 = Profiler.now();
                 try {
                     m.onTick();
                 } catch (RuntimeException e) {
                     Platform.log("Module " + m.id + " tick failed: " + e);
                 }
+                Profiler.add(m.id + ":tick", t0);
             }
         }
         if (inGame && !Platform.screenOpen()) {
@@ -155,11 +162,13 @@ public final class Hud {
         for (Module m : Config.modules()) {
             if (!m.hud) {
                 if (m.enabled()) {
+                    long t0 = Profiler.now();
                     try {
                         m.overlay(g, partial);
                     } catch (RuntimeException e) {
                         Platform.log("Module " + m.id + " overlay failed: " + e);
                     }
+                    Profiler.add(m.id + ":draw", t0);
                 }
                 continue;
             }
@@ -167,6 +176,7 @@ public final class Hud {
             float s = m.shown.get();
             if (s < 0.01f || m.empty()) continue;
             boolean pushed = false;
+            long t0 = Profiler.now();
             try {
                 float sc = m.scale.get();
                 float w = m.width(g) * sc, h = m.height(g) * sc;
@@ -183,6 +193,7 @@ public final class Hud {
             } finally {
                 if (pushed) g.pop();
                 g.alpha = 1f;
+                Profiler.add(m.id + ":draw", t0);
             }
         }
     }

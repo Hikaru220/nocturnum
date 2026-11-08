@@ -45,6 +45,7 @@ public final class Gfx {
         Component c = CACHE.get(s);
         if (c == null) {
             c = Component.literal(s).withStyle(UI_STYLE);
+            if (CACHE.size() > 2000) CACHE.clear();
             CACHE.put(s, c);
         }
         return c;
@@ -66,7 +67,13 @@ public final class Gfx {
 
     public int textBoldW(String s) {
         if (!customFont) return textW(s);
-        return font().width(Component.literal(s).withStyle(BOLD_STYLE));
+        Component c = BOLD_CACHE.get(s);
+        if (c == null) {
+            c = Component.literal(s).withStyle(BOLD_STYLE);
+            if (BOLD_CACHE.size() > 2000) BOLD_CACHE.clear();
+            BOLD_CACHE.put(s, c);
+        }
+        return font().width(c);
     }
 
     public int w() { return g.guiWidth(); }

@@ -251,7 +251,7 @@ function LogTab({ inst }: { inst: Instance }) {
   useEffect(() => {
     api.gameLog(inst.id).then(setLines);
     const un = listen<{ instanceId: string; line: string }>("game-log", (e) => {
-      if (e.payload.instanceId === inst.id) setLines((l) => (l.length > 4000 ? [...l.slice(-3000), e.payload.line] : [...l, e.payload.line]));
+      if (e.payload.instanceId === inst.id) setLines((l) => (l.length > 4000 ? [...l.slice(-3000), ...e.payload.line.split("\n")] : [...l, ...e.payload.line.split("\n")]));
     });
     return () => {
       un.then((f) => f());

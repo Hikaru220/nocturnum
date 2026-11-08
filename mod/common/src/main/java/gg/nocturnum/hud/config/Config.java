@@ -111,9 +111,28 @@ public final class Config {
         lastSave = System.currentTimeMillis();
     }
 
-    /** Called every client tick: writes at most once per two seconds. */
+    private static final java.util.concurrent.ExecutorService IO = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "nocturnum-io");
+        t.setDaemon(true);
+        return t;
+    });
+
+    /** Called every client tick: serialises on this thread, writes in the background 0.5 s after the last change. */
     public static void tick() {
-        if (dirty && System.currentTimeMillis() - lastSave > 2000) save();
+        if (!dirty || System.currentTimeMillis() - lastSave < 500) return;
+        dirty = false;
+        lastSave = System.currentTimeMillis();
+        final String json = GSON.toJson(toJson());
+        final Path f = file(profile);
+        final String prof = profile;
+        IO.execute(() -> {
+            try {
+                Files.writeString(f, json);
+                Files.writeString(dir().resolve("active.txt"), prof);
+            } catch (IOException e) {
+                Platform.log("Config save failed: " + e);
+            }
+        });
     }
 
     // ---------- profiles ----------

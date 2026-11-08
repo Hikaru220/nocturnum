@@ -34,6 +34,9 @@ public final class HudEditorView extends View {
 
     @Override public boolean dimBackground() { return false; }
 
+    /** Snap lines are collected once per drag, not on every mouse move. */
+    private List<Float> snapXs, snapYs;
+
     private List<Module> elements() {
         List<Module> l = new ArrayList<>();
         for (Module m : Config.modules()) if (m.hud) l.add(m);
@@ -132,7 +135,7 @@ public final class HudEditorView extends View {
                 set("potions", 0.01f, 0.35f);
             }
             case "streamer" -> {
-                set("keystrokes", 0.01f, 0.7f);
+                set("keystrokes", 0.84f, 0.64f);
                 set("cps", 0.01f, 0.6f);
             }
             default -> {
@@ -181,6 +184,7 @@ public final class HudEditorView extends View {
     public boolean mouseReleased(double x, double y, int button) {
         ui.release();
         dragging = null;
+        snapXs = snapYs = null;
         guideX = guideY = -1;
         Config.markDirty();
         return true;
@@ -195,16 +199,19 @@ public final class HudEditorView extends View {
         float nx = (float) x - grabDx, ny = (float) y - grabDy;
         guideX = guideY = -1;
         // snapping: edges, centre and other elements (6px threshold)
-        List<Float> xs = new ArrayList<>(List.of(0f, width / 2f, (float) width));
-        List<Float> ys = new ArrayList<>(List.of(0f, height / 2f, (float) height));
-        for (Module o : elements()) {
-            if (o == m || !o.enabled()) continue;
-            float[] b = box(o, lastGfx);
-            xs.add(b[0]);
-            xs.add(b[0] + b[2]);
-            ys.add(b[1]);
-            ys.add(b[1] + b[3]);
+        if (snapXs == null) {
+            snapXs = new ArrayList<>(List.of(0f, width / 2f, (float) width));
+            snapYs = new ArrayList<>(List.of(0f, height / 2f, (float) height));
+            for (Module o : elements()) {
+                if (o == m || !o.enabled()) continue;
+                float[] b = box(o, lastGfx);
+                snapXs.add(b[0]);
+                snapXs.add(b[0] + b[2]);
+                snapYs.add(b[1]);
+                snapYs.add(b[1] + b[3]);
+            }
         }
+        List<Float> xs = snapXs, ys = snapYs;
         float bestX = 6, bestY = 6;
         for (float t : xs) {
             for (float edge : new float[]{nx, nx + w / 2f, nx + w}) {

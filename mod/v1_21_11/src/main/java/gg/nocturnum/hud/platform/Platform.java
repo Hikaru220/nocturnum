@@ -289,6 +289,12 @@ public final class Platform {
         // timestamps and click-to-copy for system / server messages
         net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.MODIFY_GAME.register((msg, overlay) ->
             overlay ? msg : gg.nocturnum.hud.module.Whitelist.pass(msg));
+        net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, registry) ->
+            dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("nocturnum")
+                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("perf").executes(c -> {
+                    gg.nocturnum.hud.util.Profiler.toggle();
+                    return 1;
+                }))));
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
             if (world.isClientSide()) gg.nocturnum.hud.module.PackModules.onAttack(entity);
             return InteractionResult.PASS;

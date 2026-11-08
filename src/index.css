@@ -142,3 +142,6 @@ input[type="range"]::-webkit-slider-thumb {
   box-shadow: 0 0 0 1px var(--accent);
   cursor: pointer;
 }
+
+/* launcher sleeps while the game runs (ТЗ 4.2) */
+.frozen *, .frozen *::before, .frozen *::after { animation: none !important; transition: none !important; backdrop-filter: none !important; }

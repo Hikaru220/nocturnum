@@ -51,6 +51,9 @@ pub struct GameExit {
     pub hint: Option<CrashHint>,
 }
 
+static PENDING: Lazy<Mutex<(Vec<String>, std::time::Instant)>> = Lazy::new(|| Mutex::new((Vec::new(), std::time::Instant::now())));
+
+/// Keeps the line in the ring buffer; the UI gets batches at most 4 times a second and nothing while the window is hidden.
 fn push_log(app: &AppHandle, id: &str, line: String) {
     {
         let mut l = LOGS.lock().unwrap();
@@ -60,7 +63,21 @@ fn push_log(app: &AppHandle, id: &str, line: String) {
         }
         q.push_back(line.clone());
     }
-    let _ = app.emit("game-log", GameLog { instance_id: id.to_string(), line });
+    let visible = app.get_webview_window("main").map(|w| w.is_visible().unwrap_or(false)).unwrap_or(false);
+    let mut p = PENDING.lock().unwrap();
+    if !visible {
+        p.0.clear();
+        return;
+    }
+    p.0.push(line);
+    if p.1.elapsed() >= std::time::Duration::from_millis(250) {
+        let batch = p.0.join("
+");
+        p.0.clear();
+        p.1 = std::time::Instant::now();
+        drop(p);
+        let _ = app.emit("game-log", GameLog { instance_id: id.to_string(), line: batch });
+    }
 }
 
 pub fn get_log(id: &str) -> Vec<String> {
@@ -207,7 +224,7 @@ pub async fn prepare(app: &AppHandle, inst: &Instance, st: &Settings, pid: &str)
     };
 
     let mut jvm: Vec<String> = Vec::new();
-    let ram = if inst.ram_mb > 0 { inst.ram_mb } else { st.default_ram_mb };
+    let ram = (if inst.ram_mb > 0 { inst.ram_mb } else { st.default_ram_mb }).min(8192);
     jvm.push(format!("-Xmx{ram}M"));
     jvm.push("-Xms256M".into());
     for a in [
@@ -259,6 +276,8 @@ pub async fn prepare(app: &AppHandle, inst: &Instance, st: &Settings, pid: &str)
         jvm.push(format!("-Dnocturnum.media.token={}", b.token));
     }
     jvm.push(format!("-Dnocturnum.state={}", game_dir.join(".nocturnum").join("state.json").display()));
+    // ТЗ 5.1: no agents / debug flags in a release launch
+    jvm.retain(|a| !(a.starts_with("-javaagent") || a.starts_with("-agentlib") || a == "-Xint" || a == "-Xdebug" || a == "-XX:+UseSerialGC"));
 
     let main_class = resolved["mainClass"].as_str().ok_or_else(|| anyhow!("mainClass не указан"))?.to_string();
 
@@ -361,12 +380,12 @@ async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: 
     net::emit_progress(app, pid, "Запуск игры", 100.0, 0.0, false, None);
     let prepared = prepare(app, inst, st, pid).await?;
 
-    if st.discrete_gpu {
-        set_gpu_preference(&prepared.java);
-    }
+    // ТЗ 5.3: "Авто" = high-performance GPU for our javaw.exe
+    set_gpu_preference(&prepared.java);
     let _ = std::fs::remove_file(prepared.game_dir.join(".nocturnum").join("state.json"));
     sync_blacklist(&prepared.game_dir).await;
 
+    instances::fix_perf_options(&inst.id);
     let mut cmd = tokio::process::Command::new(&prepared.java);
     cmd.args(&prepared.args)
         .current_dir(&prepared.game_dir)

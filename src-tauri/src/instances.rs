@@ -145,7 +145,7 @@ pub const PRESET: &[(&str, &str)] = &[
     ("renderDistance", "12"),
     ("simulationDistance", "8"),
     ("graphicsMode", "1"),
-    ("maxFps", "144"),
+    ("maxFps", "260"),
     ("enableVsync", "false"),
     // music off from the first launch (ТЗ preset: tuned for play, not for the menu theme)
     ("soundCategory_music", "0.0"),
@@ -155,9 +155,9 @@ pub const PRESET: &[(&str, &str)] = &[
 /// Graphics values for a hardware tier (ТЗ пакет 2, 7.2 "Автонастройка под ПК").
 pub fn tier_values(tier: &str) -> Vec<(&'static str, &'static str)> {
     match tier {
-        "low" => vec![("renderDistance", "6"), ("simulationDistance", "5"), ("graphicsMode", "0"), ("particles", "2"), ("maxFps", "90"), ("entityDistanceScaling", "0.75")],
+        "low" => vec![("renderDistance", "6"), ("simulationDistance", "5"), ("graphicsMode", "0"), ("particles", "2"), ("maxFps", "260"), ("entityDistanceScaling", "0.75")],
         "high" => vec![("renderDistance", "16"), ("simulationDistance", "10"), ("graphicsMode", "1"), ("particles", "0"), ("maxFps", "260")],
-        _ => vec![("renderDistance", "10"), ("simulationDistance", "8"), ("graphicsMode", "1"), ("particles", "1"), ("maxFps", "144")],
+        _ => vec![("renderDistance", "10"), ("simulationDistance", "8"), ("graphicsMode", "1"), ("particles", "1"), ("maxFps", "260")],
     }
 }
 
@@ -329,4 +329,31 @@ pub fn list_screenshots(id: &str) -> Vec<String> {
     v.sort();
     v.reverse();
     v
+}
+
+/// One-time fix for instances created with a frame cap: unlimited FPS, vsync off (ТЗ 6.3). Marker file keeps later player choices.
+pub fn fix_perf_options(id: &str) {
+    let dir = game_dir(id);
+    let marker = dir.join(".nocturnum").join("perf1");
+    if marker.exists() {
+        return;
+    }
+    let f = dir.join("options.txt");
+    if let Ok(text) = std::fs::read_to_string(&f) {
+        let mut out = Vec::new();
+        for l in text.lines() {
+            if l.starts_with("maxFps:") {
+                out.push("maxFps:260".to_string());
+            } else if l.starts_with("enableVsync:") {
+                out.push("enableVsync:false".to_string());
+            } else {
+                out.push(l.to_string());
+            }
+        }
+        let _ = std::fs::write(&f, out.join("
+") + "
+");
+    }
+    let _ = std::fs::create_dir_all(marker.parent().unwrap());
+    let _ = std::fs::write(&marker, "1");
 }
