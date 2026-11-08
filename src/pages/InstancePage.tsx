@@ -65,6 +65,19 @@ export default function InstancePage({ id, initialTab }: { id: string; initialTa
   );
 }
 
+/** Mod icon (Modrinth project icon, lazy) with a letter fallback on a coloured tile. */
+function ModIcon({ url, name, dim }: { url?: string; name: string; dim: boolean }) {
+  const [bad, setBad] = useState(false);
+  const hue = [...name].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
+  return url && !bad ? (
+    <img src={url} loading="lazy" onError={() => setBad(true)} className={`size-8 rounded-[8px] shrink-0 ${dim ? "opacity-50" : ""}`} alt="" />
+  ) : (
+    <div className={`size-8 rounded-[8px] shrink-0 flex items-center justify-center font-bold text-white ${dim ? "opacity-50" : ""}`} style={{ background: `hsl(${hue} 45% 38%)` }}>
+      {name.replace(/^\W+/, "").charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 /* ---------- mods / packs ---------- */
 function ContentTab({ inst, kind }: { inst: Instance; kind: "mods" | "resourcepacks" | "shaderpacks" }) {
   const { t, navigate, toast } = useApp();
@@ -73,6 +86,8 @@ function ContentTab({ inst, kind }: { inst: Instance; kind: "mods" | "resourcepa
   const [checking, setChecking] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [del, setDel] = useState<ContentFile | null>(null);
+  const [icons, setIcons] = useState<Record<string, string>>({});
+  const gameRunning = useApp((s) => s.running.length > 0);
 
   const reload = useCallback(() => api.listContent(inst.id, kind).then(setFiles).catch((e) => toast("error", errText(e))), [inst.id, kind]);
   useEffect(() => {
@@ -82,6 +97,12 @@ function ContentTab({ inst, kind }: { inst: Instance; kind: "mods" | "resourcepa
       un.then((f) => f());
     };
   }, [reload]);
+  // icons: one batched request, never while a game is running
+  useEffect(() => {
+    if (!files || gameRunning || kind !== "mods") return;
+    const ids = [...new Set(files.map((f) => f.projectId).filter(Boolean))];
+    if (ids.length) api.projectIcons(ids).then(setIcons).catch(() => {});
+  }, [files, gameRunning, kind]);
   // Refresh when background installs finish
   const progress = useApp((s) => s.progress);
   const busyKey = Object.values(progress).filter((p) => p.done && !p.error).length;
@@ -165,9 +186,9 @@ function ContentTab({ inst, kind }: { inst: Instance; kind: "mods" | "resourcepa
             return (
               <Card key={f.fileName} className="px-4 h-14 flex items-center gap-4">
                 <Toggle checked={f.enabled} label={f.fileName} onChange={(v) => api.toggleContent(inst.id, kind, f.fileName, v).then(reload).catch((e) => toast("error", errText(e)))} />
-                <div className={`min-w-0 flex-1 ${f.enabled ? "" : "opacity-50"}`}>
+                <ModIcon url={icons[f.projectId]} name={f.title || f.fileName} dim={!f.enabled} />
+                <div className={`min-w-0 flex-1 ${f.enabled ? "" : "opacity-50"}`} title={f.fileName.replace(/\.disabled$/, "")}>
                   <div className="font-semibold truncate">{f.title || f.fileName.replace(/\.disabled$/, "")}</div>
-                  {f.title && <div className="text-xs text-faint truncate">{f.fileName.replace(/\.disabled$/, "")}</div>}
                 </div>
                 {up && <Badge tone="accent">→ {up.newVersionNumber}</Badge>}
                 {!f.enabled && <Badge>{t("inst.disabled")}</Badge>}

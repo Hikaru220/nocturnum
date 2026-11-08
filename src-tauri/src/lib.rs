@@ -382,6 +382,11 @@ async fn sunshine_status() -> Option<sunshine::Status> {
 }
 
 #[tauri::command]
+async fn project_icons(ids: Vec<String>) -> R<std::collections::HashMap<String, String>> {
+    modrinth::icons(ids).await
+}
+
+#[tauri::command]
 fn game_log(id: String) -> Vec<String> {
     launch::get_log(&id)
 }
@@ -838,6 +843,7 @@ pub fn run() {
             repair_instance,
             launch_instance,
             kill_instance,
+            project_icons,
             sunshine_status,
             diagnostics,
             cancel_launch,

@@ -37,10 +37,14 @@ public final class HudEditorView extends View {
     /** Snap lines are collected once per drag, not on every mouse move. */
     private List<Float> snapXs, snapYs;
 
+    private List<Module> cachedElements;
+
     private List<Module> elements() {
-        List<Module> l = new ArrayList<>();
-        for (Module m : Config.modules()) if (m.hud) l.add(m);
-        return l;
+        if (cachedElements == null) {
+            cachedElements = new ArrayList<>();
+            for (Module m : Config.modules()) if (m.hud) cachedElements.add(m);
+        }
+        return cachedElements;
     }
 
     private float[] box(Module m, Gfx g) {
@@ -72,10 +76,8 @@ public final class HudEditorView extends View {
             boolean sel = m == dragging || m == focus;
             g.push(b[0], b[1], m.scale.get());
             if (m instanceof gg.nocturnum.hud.module.TargetHudModule t) t.previewMode = true;
-            float prevAlpha = g.alpha;
-            if (!m.enabled()) g.alpha = 0.45f;
-            m.render(g, pt);
-            g.alpha = prevAlpha;
+            // disabled elements are only an outline: nothing to draw, nothing to measure each frame
+            if (m.enabled()) m.render(g, pt);
             if (m instanceof gg.nocturnum.hud.module.TargetHudModule t) t.previewMode = false;
             g.pop();
             int outline = sel ? Theme.accent(255) : hover ? Theme.accent(200) : Theme.accent(70);

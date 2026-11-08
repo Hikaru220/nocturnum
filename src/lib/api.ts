@@ -199,6 +199,7 @@ export const api = {
   running: () => invoke<string[]>("running_instances"),
   diagnostics: (id: string, onlyCmd: boolean) => invoke<string>("diagnostics", { id, onlyCmd }),
   sunshineStatus: () => invoke<{ online: number; max: number; pingMs: number; address: string } | null>("sunshine_status"),
+  projectIcons: (ids: string[]) => invoke<Record<string, string>>("project_icons", { ids }),
   gameLog: (id: string) => invoke<string[]>("game_log", { id }),
   applyCrashFix: (id: string, action: string) => invoke<void>("apply_crash_fix", { id, action }),
 

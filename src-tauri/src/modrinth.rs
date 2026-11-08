@@ -531,3 +531,28 @@ pub async fn apply_cf(app: &AppHandle, pid: &str, inst: &Instance, path: &Path, 
     let _ = paths::root();
     Ok(missing)
 }
+
+static ICONS: once_cell::sync::Lazy<std::sync::Mutex<std::collections::HashMap<String, String>>> = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+
+/// Project icons for a list of Modrinth project ids: one batched request, cached for the session.
+pub async fn icons(ids: Vec<String>) -> R<std::collections::HashMap<String, String>> {
+    let missing: Vec<String> = {
+        let c = ICONS.lock().unwrap();
+        ids.iter().filter(|i| !i.is_empty() && !c.contains_key(*i)).cloned().collect()
+    };
+    if !missing.is_empty() {
+        let url = format!("{API}/projects?ids={}", urlencoding::encode(&serde_json::to_string(&missing)?));
+        let list: Vec<Value> = net::get_json(&url).await?;
+        let mut c = ICONS.lock().unwrap();
+        for p in &list {
+            if let (Some(id), Some(u)) = (p["id"].as_str(), p["icon_url"].as_str()) {
+                c.insert(id.to_string(), u.to_string());
+            }
+        }
+        for m in missing {
+            c.entry(m).or_default();
+        }
+    }
+    let c = ICONS.lock().unwrap();
+    Ok(ids.into_iter().filter_map(|i| c.get(&i).filter(|u| !u.is_empty()).map(|u| (i.clone(), u.clone()))).collect())
+}
