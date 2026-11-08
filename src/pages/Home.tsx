@@ -132,7 +132,7 @@ export default function Home() {
                   <div className="font-bold truncate">{i.name}</div>
                   <LoaderBadge inst={i} />
                 </div>
-                <div onClick={(e) => e.stopPropagation()}>
+                <div className="min-w-0 shrink" onClick={(e) => e.stopPropagation()}>
                   <PlayButton inst={i} />
                 </div>
               </Card>

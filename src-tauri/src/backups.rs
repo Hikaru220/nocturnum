@@ -93,26 +93,42 @@ pub fn restore(id: &str, file_name: &str) -> R<()> {
     let src = dir(id).join(file_name);
     let game = instances::game_dir(id);
     let mut z = zip::ZipArchive::new(std::fs::File::open(&src).map_err(|_| anyhow!("Копия не найдена"))?)?;
-    // worlds are replaced as a whole, so the restored state is exactly the saved one
+    // worlds are replaced as a whole, but the current ones are kept aside until the restore has succeeded
     let has_saves = (0..z.len()).any(|i| z.name_for_index(i).map(|n| n.starts_with("saves/")).unwrap_or(false));
-    if has_saves {
-        let _ = std::fs::remove_dir_all(game.join("saves"));
+    let aside = game.join("saves.before-restore");
+    let mut moved = false;
+    if has_saves && game.join("saves").exists() {
+        let _ = std::fs::remove_dir_all(&aside);
+        std::fs::rename(game.join("saves"), &aside).map_err(|e| anyhow!("Не удалось отодвинуть текущие миры: {e}"))?;
+        moved = true;
     }
-    for i in 0..z.len() {
-        let mut e = z.by_index(i)?;
-        let name = e.name().replace('\\', "/");
-        if e.is_dir() || name.split('/').any(|p| p == "..") || name.starts_with('/') || name.contains(':') {
-            continue;
+    let res = (|| -> R<()> {
+        for i in 0..z.len() {
+            let mut e = z.by_index(i)?;
+            let name = e.name().replace('\\', "/");
+            if e.is_dir() || name.split('/').any(|p| p == "..") || name.starts_with('/') || name.contains(':') {
+                continue;
+            }
+            if !ITEMS.iter().any(|it| name == *it || name.starts_with(&format!("{it}/"))) {
+                continue;
+            }
+            let out = game.join(&name);
+            if let Some(p) = out.parent() {
+                std::fs::create_dir_all(p)?;
+            }
+            let mut f = std::fs::File::create(out)?;
+            std::io::copy(&mut e, &mut f)?;
         }
-        if !ITEMS.iter().any(|it| name == *it || name.starts_with(&format!("{it}/"))) {
-            continue;
+        Ok(())
+    })();
+    if moved {
+        if res.is_ok() {
+            let _ = std::fs::remove_dir_all(&aside);
+        } else {
+            // restore failed halfway: put the previous worlds back
+            let _ = std::fs::remove_dir_all(game.join("saves"));
+            let _ = std::fs::rename(&aside, game.join("saves"));
         }
-        let out = game.join(&name);
-        if let Some(p) = out.parent() {
-            std::fs::create_dir_all(p)?;
-        }
-        let mut f = std::fs::File::create(out)?;
-        std::io::copy(&mut e, &mut f)?;
     }
-    Ok(())
+    res
 }

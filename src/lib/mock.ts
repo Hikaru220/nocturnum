@@ -57,6 +57,8 @@ export function installMock() {
     mr_versions: () => [{ id: "v1", name: "Sodium 0.6.0", version_number: "0.6.0", game_versions: ["1.21.11"], loaders: ["fabric"], version_type: "release" }],
     skin_library: () => [],
     gallery_list: () => [],
+    project_icons: () => ({}),
+    sunshine_status: () => null,
     list_backups: () => [],
     build_licenses: () => [],
     check_updates: () => [],

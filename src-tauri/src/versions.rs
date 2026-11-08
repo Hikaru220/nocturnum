@@ -407,7 +407,12 @@ fn extract_natives(jar: &std::path::Path, dest: &std::path::Path) -> R<()> {
         }
         let Some(safe) = e.enclosed_name() else { continue };
         let out = dest.join(safe.file_name().unwrap_or_default());
-        let mut o = std::fs::File::create(out)?;
+        // a library already loaded by another running client cannot be rewritten: keep it as it is
+        let mut o = match std::fs::File::create(&out) {
+            Ok(f) => f,
+            Err(_) if out.exists() => continue,
+            Err(e) => return Err(e.into()),
+        };
         std::io::copy(&mut e, &mut o)?;
     }
     Ok(())

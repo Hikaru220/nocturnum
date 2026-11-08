@@ -120,8 +120,9 @@ export function PlayButton({ inst, big, className }: { inst: Instance; big?: boo
         "relative overflow-hidden inline-flex items-center justify-center gap-3 font-bold transition-all active:scale-[0.99] disabled:cursor-wait",
         "bg-accent text-[var(--on-accent)] hover:brightness-110 glow",
         big ? "h-14 px-10 text-lg rounded-[12px] min-w-64" : "h-10 px-6 text-sm rounded-[10px] min-w-32",
-        busy ? "flex-1" : className,
+        busy ? (big ? "flex-1" : "min-w-0 max-w-40 shrink px-3") : className,
       )}
+      title={busy ? prog!.label : undefined}
     >
       {busy && (
         <span
@@ -129,11 +130,11 @@ export function PlayButton({ inst, big, className }: { inst: Instance; big?: boo
           style={{ width: `${prog!.percent}%` }}
         />
       )}
-      <span className="relative flex items-center gap-2">
+      <span className={cx("relative flex items-center gap-2 min-w-0", !big && "max-w-full")}>
         {busy ? <Spinner className="size-4 text-current" /> : <Gamepad2 className={big ? "size-6" : "size-4"} />}
         {busy ? (
           <>
-            {prog!.label}
+            <span className="truncate">{prog!.label}</span>
             {prog!.percent > 0 && prog!.percent < 100 && ` ${Math.round(prog!.percent)}%`}
             {prog!.speed > 0 && <span className="opacity-70 font-medium text-sm">· {t("launch.speed", { speed: formatBytes(prog!.speed) })}</span>}
           </>

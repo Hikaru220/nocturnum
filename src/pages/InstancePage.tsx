@@ -101,7 +101,7 @@ function ContentTab({ inst, kind }: { inst: Instance; kind: "mods" | "resourcepa
   useEffect(() => {
     if (!files || gameRunning || kind !== "mods") return;
     const ids = [...new Set(files.map((f) => f.projectId).filter(Boolean))];
-    if (ids.length) api.projectIcons(ids).then(setIcons).catch(() => {});
+    if (ids.length) api.projectIcons(ids).then((r) => setIcons(r ?? {})).catch(() => {});
   }, [files, gameRunning, kind]);
   // Refresh when background installs finish
   const progress = useApp((s) => s.progress);
