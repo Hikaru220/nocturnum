@@ -192,8 +192,22 @@ public final class ExtraModules {
             super("discordrpc", Category.OTHER, true, false, 0, 0);
         }
 
+        private final long startSec = System.currentTimeMillis() / 1000;
+
+        /** The mod owns the Discord status while the game runs, so it works without the launcher. */
+        private void rpc() {
+            if (System.getProperty("nocturnum.rpc") == null) return;
+            String name = System.getProperty("nocturnum.rpc.name", "").replace('_', ' ');
+            boolean hideServer = System.getProperty("nocturnum.rpc.hideserver") != null;
+            boolean mp = Game.inWorld() && !Game.singleplayer();
+            String d = !Game.inWorld() ? "В главном меню" : Game.singleplayer() ? "Одиночная игра" : "Играет на сервере";
+            String st = mp && !hideServer && showServer.get() && !Game.streamer() ? Game.serverAddress() : name;
+            gg.nocturnum.hud.util.DiscordIpc.update(d, st == null ? "" : st, startSec);
+        }
+
         @Override
         public void onTick() {
+            rpc();
             String path = System.getProperty("nocturnum.state");
             if (path == null) return;
             String screen = !Game.inWorld() ? "menu" : Game.singleplayer() ? "singleplayer" : "multiplayer";

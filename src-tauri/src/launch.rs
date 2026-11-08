@@ -271,6 +271,16 @@ pub async fn prepare(app: &AppHandle, inst: &Instance, st: &Settings, pid: &str)
         }
     }
     jvm.push("-Dnocturnum.launcher=1".to_string());
+    if inst.hud_enabled && st.discord_rpc {
+        jvm.push("-Dnocturnum.rpc=1".to_string());
+        jvm.push(format!("-Dnocturnum.rpc.appid={}", crate::rpc::effective_id(&st.discord_app_id)));
+        if !st.rpc_hide_instance {
+            jvm.push(format!("-Dnocturnum.rpc.name={}", inst.name.replace(' ', "_")));
+        }
+        if st.rpc_hide_server {
+            jvm.push("-Dnocturnum.rpc.hideserver=1".to_string());
+        }
+    }
     if let Some(b) = crate::media::bridge() {
         jvm.push(format!("-Dnocturnum.media=127.0.0.1:{}", b.port));
         jvm.push(format!("-Dnocturnum.media.token={}", b.token));
@@ -444,7 +454,12 @@ async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: 
 
     // RPC state poller
     let poll_id = id.clone();
+    let mod_owns = inst.hud_enabled && st.discord_rpc;
     let poller = tokio::spawn(async move {
+        if mod_owns {
+            rpc::set(rpc::State::Off);
+            return;
+        }
         loop {
             tokio::time::sleep(std::time::Duration::from_secs(4)).await;
             let s = std::fs::read_to_string(&state_file).ok().and_then(|s| serde_json::from_str::<Value>(&s).ok());

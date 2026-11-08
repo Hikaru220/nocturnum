@@ -17,7 +17,7 @@ pub enum State {
 /// Application ID of the Nocturnum app in the Discord Developer Portal (public, not a secret).
 pub const DEFAULT_APP_ID: &str = "1565258293826297997";
 
-fn effective_id(custom: &str) -> String {
+pub fn effective_id(custom: &str) -> String {
     let c = custom.trim();
     if c.is_empty() { DEFAULT_APP_ID.to_string() } else { c.to_string() }
 }
