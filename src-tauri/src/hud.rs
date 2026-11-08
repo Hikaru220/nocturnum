@@ -17,6 +17,9 @@ pub const SODIUM: &str = "AANobbMI";
 pub const LITHIUM: &str = "gvQqBUqZ";
 
 /// Layer 1 of the optimisation stack (ТЗ пакет 2, п. 7.1): original files from Modrinth, never bundled.
+/// ТЗ 7.2: ready-made mods that replace our own functions (minimap, zoom, chat, F3 info, skins, status effects).
+pub const READY_MOD_SLUGS: &[&str] = &["xaeros-minimap", "xaeros-world-map", "zoomify", "chatpatches", "chat-heads", "appleskin", "status-effect-bars", "minihud", "betterf3", "3dskinlayers", "not-enough-animations", "wavey-capes", "modmenu"];
+
 pub const OPTIMIZATION_SLUGS: &[&str] = &["sodium", "sodium-extra", "lithium", "ferrite-core", "modernfix", "immediatelyfast", "entityculling", "moreculling", "badoptimizations", "dynamic-fps", "spark"];
 
 #[derive(Serialize, Clone)]

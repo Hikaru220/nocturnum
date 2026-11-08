@@ -37,6 +37,9 @@ public final class Config {
     /** ТЗ 8.1: everything else starts off. */
     private static final java.util.Set<String> DEFAULT_ON = java.util.Set.of("clickgui", "watermark", "armor", "itemcounter", "lowfire",
         "leaveprotection", "discordrpc", "loading", "mainmenu", "crosshair");
+    /** Our own function steps aside when the ready-made mod that does the same is present (ТЗ 7.2, rule of no duplicates). */
+    private static final java.util.Map<String, String> REPLACED_BY = java.util.Map.of("minimap", "xaerominimap", "zoom", "zoomify",
+        "enhancedchat", "chatpatches", "coords", "minihud", "freelook", "zoomify");
     private static int loadedVersion;
 
     public static List<Module> modules() { return ACTIVE; }
@@ -55,7 +58,10 @@ public final class Config {
 
     public static void register(Module m) {
         MODULES.add(m);
-        if (!REMOVED.contains(m.id)) ACTIVE.add(m);
+        String by = REPLACED_BY.get(m.id);
+        boolean replaced = by != null && gg.nocturnum.hud.platform.Platform.modLoaded(by);
+        if (replaced) m.silentOff();
+        if (!REMOVED.contains(m.id) && !replaced) ACTIVE.add(m);
     }
 
     @SuppressWarnings("unchecked")

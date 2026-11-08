@@ -28,6 +28,8 @@ public final class Platform {
 
     public static Path configDir() { return FabricLoader.getInstance().getConfigDir(); }
 
+    public static boolean modLoaded(String id) { return net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded(id); }
+
     public static void log(String s) { LOG.info(s); }
 
     public static String languageCode() { return Minecraft.getInstance().options.languageCode; }
