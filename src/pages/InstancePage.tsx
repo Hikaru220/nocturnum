@@ -266,6 +266,12 @@ function LogTab({ inst }: { inst: Instance }) {
         <Button icon={<Copy className="size-4" />} onClick={() => navigator.clipboard.writeText(lines.join("\n")).then(() => toast("ok", t("common.copied")))}>
           {t("inst.copyLog")}
         </Button>
+        <Button onClick={() => api.diagnostics(inst.id, true).then((c) => navigator.clipboard.writeText(c)).then(() => toast("ok", t("common.copied")))}>
+          {t("inst.copyCmd")}
+        </Button>
+        <Button onClick={() => api.diagnostics(inst.id, false).then((c) => navigator.clipboard.writeText(c)).then(() => toast("ok", t("common.copied")))}>
+          {t("inst.diag")}
+        </Button>
         <Button variant="ghost" onClick={() => setLines([])}>
           {t("inst.clearLog")}
         </Button>

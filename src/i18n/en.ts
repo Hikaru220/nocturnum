@@ -44,6 +44,8 @@ const en: Record<Key, string> = {
   "home.noInstances": "You have no instances yet",
   "home.noInstancesHint": "Create your first instance — it takes a minute.",
   "home.createFirst": "Create instance",
+  "inst.copyCmd": "Copy launch command",
+  "inst.diag": "Performance diagnostics",
   "home.stop": "Stop game",
   "home.cancel": "Cancel launch",
   "home.running": "Game is running",

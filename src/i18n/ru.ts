@@ -45,6 +45,8 @@ const ru = {
   "home.noInstances": "У вас пока нет сборок",
   "home.noInstancesHint": "Создайте первую сборку — это займёт минуту.",
   "home.createFirst": "Создать сборку",
+  "inst.copyCmd": "Скопировать команду запуска",
+  "inst.diag": "Диагностика производительности",
   "home.stop": "Остановить игру",
   "home.cancel": "Отменить запуск",
   "home.running": "Игра запущена",

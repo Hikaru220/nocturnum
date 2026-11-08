@@ -23,6 +23,7 @@ pub struct Running {
 }
 
 pub static RUNNING: Lazy<Mutex<HashMap<String, Running>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+pub static LAST_CMD: Lazy<Mutex<HashMap<String, String>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 pub static CANCEL: Lazy<Mutex<HashMap<String, std::sync::Arc<tokio::sync::Notify>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 pub static LOGS: Lazy<Mutex<HashMap<String, VecDeque<String>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 const MAX_LOG_LINES: usize = 5000;
@@ -396,6 +397,16 @@ async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: 
     sync_blacklist(&prepared.game_dir).await;
 
     instances::fix_perf_options(&inst.id);
+    {
+        let mut line = format!("\"{}\"", prepared.java.display());
+        let mut hide = false;
+        for a in &prepared.args {
+            line.push(' ');
+            line.push_str(if hide { "***" } else { a.as_str() });
+            hide = a == "--accessToken";
+        }
+        LAST_CMD.lock().unwrap().insert(inst.id.clone(), line);
+    }
     let mut cmd = tokio::process::Command::new(&prepared.java);
     cmd.args(&prepared.args)
         .current_dir(&prepared.game_dir)
@@ -409,6 +420,13 @@ async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: 
     cmd.creation_flags(0x08000000);
     let mut child = cmd.spawn().with_context(|| format!("не удалось запустить {}", prepared.java.display()))?;
     let child_pid = child.id().unwrap_or(0);
+    #[cfg(windows)]
+    {
+        crate::winapi::set_eco(child_pid, false); // the game never runs in efficiency mode
+        if st.minimize_on_launch {
+            crate::winapi::set_eco(0, true); // the sleeping launcher does
+        }
+    }
     if st.high_priority {
         set_high_priority(child_pid);
     }
@@ -494,6 +512,8 @@ async fn launch_inner(app: &AppHandle, inst: &mut Instance, st: &Settings, pid: 
         i.play_time_secs += secs;
         let _ = instances::save(&i);
     }
+    #[cfg(windows)]
+    crate::winapi::set_eco(0, false);
     rpc::set(rpc::State::Launcher);
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.show();
@@ -637,4 +657,42 @@ pub fn analyze_crash(id: &str, log: &[String]) -> Option<CrashHint> {
         message: "Игра завершилась с ошибкой. Скопируйте лог и покажите его в поддержке.".into(),
         action: String::new(),
     })
+}
+
+/// Performance report for a complaint (ТЗ 2.3); `only_cmd` returns just the launch command.
+pub fn diagnostics(id: &str, only_cmd: bool) -> String {
+    let cmd = LAST_CMD.lock().unwrap().get(id).cloned().unwrap_or_else(|| "(игра ещё не запускалась)".into());
+    if only_cmd {
+        return cmd;
+    }
+    let hw = crate::hardware::detect();
+    let log = get_log(id);
+    let renderer = log.iter().find(|l| l.contains("OpenGL") && (l.contains("renderer") || l.contains("Renderer") || l.contains("GL_RENDERER"))).cloned().unwrap_or_default();
+    let dir = instances::game_dir(id);
+    let opts = std::fs::read_to_string(dir.join("options.txt")).unwrap_or_default();
+    let pick = |k: &str| opts.lines().find(|l| l.starts_with(k)).unwrap_or("-").to_string();
+    let mods: Vec<String> = std::fs::read_dir(dir.join("mods")).map(|r| r.flatten().map(|e| e.file_name().to_string_lossy().to_string()).collect()).unwrap_or_default();
+    let mut out = String::new();
+    out.push_str(&format!("Nocturnum {} — диагностика
+", env!("CARGO_PKG_VERSION")));
+    out.push_str(&format!("Видеокарты ПК: {}
+Процессор: {} потоков, ОЗУ {} МБ
+", hw.gpu, hw.cpu_threads, hw.ram_mb));
+    out.push_str(&format!("Видеокарта игры (из лога): {}
+", if renderer.is_empty() { "нет данных, откройте F3 в игре".to_string() } else { renderer }));
+    out.push_str(&format!("options.txt: {} / {} / {}
+", pick("maxFps"), pick("enableVsync"), pick("renderDistance")));
+    out.push_str(&format!("Команда запуска:
+{cmd}
+
+Моды ({}):
+{}
+", mods.len(), mods.join("
+")));
+    if hw.integrated_gpu {
+        out.push_str("
+Подсказка: на ПК есть встроенная видеокарта; проверьте, что игра идёт на дискретной (F3 → Display).
+");
+    }
+    out
 }

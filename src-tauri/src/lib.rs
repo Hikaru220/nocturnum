@@ -371,6 +371,11 @@ fn running_instances() -> Vec<String> {
 }
 
 #[tauri::command]
+fn diagnostics(id: String, only_cmd: bool) -> String {
+    launch::diagnostics(&id, only_cmd)
+}
+
+#[tauri::command]
 fn game_log(id: String) -> Vec<String> {
     launch::get_log(&id)
 }
@@ -827,6 +832,7 @@ pub fn run() {
             repair_instance,
             launch_instance,
             kill_instance,
+            diagnostics,
             cancel_launch,
             running_instances,
             game_log,

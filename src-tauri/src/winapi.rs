@@ -68,3 +68,28 @@ pub fn create_shortcut(lnk: &Path, target: &Path, args: &str) -> windows::core::
         file.Save(&HSTRING::from(lnk.to_string_lossy().as_ref()), true)
     }
 }
+
+/// Windows 11 "efficiency mode" (EcoQoS) for one process; pid 0 = this process. on=false asks for full speed.
+pub fn set_eco(pid: u32, on: bool) {
+    use windows::Win32::System::Threading::{
+        GetCurrentProcess, ProcessPowerThrottling, SetProcessInformation, PROCESS_POWER_THROTTLING_CURRENT_VERSION,
+        PROCESS_POWER_THROTTLING_EXECUTION_SPEED, PROCESS_POWER_THROTTLING_STATE, PROCESS_SET_INFORMATION,
+    };
+    unsafe {
+        let (h, own) = if pid == 0 { (GetCurrentProcess(), false) } else {
+            match OpenProcess(PROCESS_SET_INFORMATION, false, pid) {
+                Ok(h) => (h, true),
+                Err(_) => return,
+            }
+        };
+        let st = PROCESS_POWER_THROTTLING_STATE {
+            Version: PROCESS_POWER_THROTTLING_CURRENT_VERSION,
+            ControlMask: PROCESS_POWER_THROTTLING_EXECUTION_SPEED,
+            StateMask: if on { PROCESS_POWER_THROTTLING_EXECUTION_SPEED } else { 0 },
+        };
+        let _ = SetProcessInformation(h, ProcessPowerThrottling, &st as *const _ as *const core::ffi::c_void, std::mem::size_of::<PROCESS_POWER_THROTTLING_STATE>() as u32);
+        if own {
+            let _ = CloseHandle(h);
+        }
+    }
+}
