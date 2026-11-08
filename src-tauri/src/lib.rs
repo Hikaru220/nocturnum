@@ -1,3 +1,5 @@
+#[cfg(windows)]
+mod winapi;
 mod auth;
 mod error;
 mod hardware;
@@ -263,22 +265,7 @@ fn create_shortcut(id: String) -> R<()> {
         let desktop = dirs::desktop_dir().ok_or_else(|| anyhow::anyhow!("Рабочий стол не найден"))?;
         let safe: String = inst.name.chars().filter(|c| !"\\/:*?\"<>|".contains(*c)).collect();
         let lnk = desktop.join(format!("{safe}.lnk"));
-        let esc = |s: &str| s.replace('\'', "''");
-        let script = format!(
-            "$s=(New-Object -ComObject WScript.Shell).CreateShortcut('{}');$s.TargetPath='{}';$s.Arguments='--launch {}';$s.IconLocation='{}';$s.Save()",
-            esc(&lnk.to_string_lossy()),
-            esc(&exe.to_string_lossy()),
-            esc(&id),
-            esc(&exe.to_string_lossy())
-        );
-        use std::os::windows::process::CommandExt;
-        let out = std::process::Command::new("powershell")
-            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-            .creation_flags(0x08000000)
-            .output()?;
-        if !out.status.success() {
-            return Err(anyhow::anyhow!("Не удалось создать ярлык").into());
-        }
+        crate::winapi::create_shortcut(&lnk, &exe, &format!("--launch {id}")).map_err(|_| anyhow::anyhow!("Не удалось создать ярлык"))?;
         Ok(())
     }
     #[cfg(not(windows))]

@@ -14,15 +14,7 @@ pub struct Hardware {
 
 #[cfg(windows)]
 fn gpu_names() -> Vec<String> {
-    use std::os::windows::process::CommandExt;
-    let out = std::process::Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", "(Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name) -join '|'"])
-        .creation_flags(0x08000000)
-        .output();
-    match out {
-        Ok(o) => String::from_utf8_lossy(&o.stdout).trim().split('|').filter(|s| !s.is_empty()).map(String::from).collect(),
-        Err(_) => vec![],
-    }
+    crate::winapi::gpu_names()
 }
 
 #[cfg(not(windows))]

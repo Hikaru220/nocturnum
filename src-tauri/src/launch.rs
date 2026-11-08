@@ -555,7 +555,7 @@ pub fn kill(id: &str) -> R<()> {
     if let Some(pid) = pid {
         #[cfg(windows)]
         {
-            let _ = std::process::Command::new("taskkill").args(["/PID", &pid.to_string(), "/T", "/F"]).output();
+            crate::winapi::kill_process(pid);
         }
         #[cfg(not(windows))]
         {
@@ -567,19 +567,7 @@ pub fn kill(id: &str) -> R<()> {
 
 #[cfg(windows)]
 fn set_gpu_preference(java: &std::path::Path) {
-    let _ = std::process::Command::new("reg")
-        .args([
-            "add",
-            "HKCU\\Software\\Microsoft\\DirectX\\UserGpuPreferences",
-            "/v",
-            &java.to_string_lossy(),
-            "/t",
-            "REG_SZ",
-            "/d",
-            "GpuPreference=2;",
-            "/f",
-        ])
-        .output();
+    crate::winapi::set_gpu_preference(java);
 }
 #[cfg(not(windows))]
 fn set_gpu_preference(_java: &std::path::Path) {}

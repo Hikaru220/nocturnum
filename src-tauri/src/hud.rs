@@ -107,8 +107,9 @@ pub async fn install(app: &AppHandle, inst: &Instance) -> R<()> {
         modrinth::install_project(app, &pid, inst, FABRIC_API, None, "mod").await?;
     }
     let s = settings::load();
-    if s.install_sodium || s.install_optimization {
-        for slug in OPTIMIZATION_SLUGS {
+    {
+        let all: Vec<&str> = if s.install_sodium || s.install_optimization { OPTIMIZATION_SLUGS.iter().chain(READY_MOD_SLUGS.iter()).copied().collect() } else { READY_MOD_SLUGS.to_vec() };
+        for slug in all {
             // resolve slug -> project id so the "already installed" check works
             let Ok(p) = modrinth::project(slug).await else { continue };
             let Some(pid2) = p["id"].as_str() else { continue };
