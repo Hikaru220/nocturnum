@@ -413,7 +413,22 @@ async fn project_icons(ids: Vec<String>) -> R<std::collections::HashMap<String, 
 
 #[tauri::command]
 fn game_log(id: String) -> Vec<String> {
-    launch::get_log(&id)
+    // spec 3.4: the game writes its own log file; the interface only reads the tail when the console is open
+    use std::io::{Read, Seek, SeekFrom};
+    let path = instances::game_dir(&id).join("logs").join("latest.log");
+    let Ok(mut f) = std::fs::File::open(path) else { return vec![] };
+    let len = f.metadata().map(|m| m.len()).unwrap_or(0);
+    let start = len.saturating_sub(512 * 1024);
+    let _ = f.seek(SeekFrom::Start(start));
+    let mut buf = Vec::new();
+    let _ = f.read_to_end(&mut buf);
+    let text = String::from_utf8_lossy(&buf);
+    let mut lines: Vec<String> = text.lines().map(String::from).collect();
+    if start > 0 && !lines.is_empty() {
+        lines.remove(0); // the first line is cut in the middle
+    }
+    let n = lines.len();
+    lines.split_off(n.saturating_sub(5000))
 }
 
 #[tauri::command]
