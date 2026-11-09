@@ -779,6 +779,7 @@ fn window_show(app: AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    theseus::install_crypto_provider(); // TLS provider the core needs before any connection
     let _ = paths::ensure_dirs();
     let launch_arg: Option<String> = {
         let a: Vec<String> = std::env::args().collect();
