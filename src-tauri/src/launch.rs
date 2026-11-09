@@ -225,9 +225,9 @@ pub async fn prepare(app: &AppHandle, inst: &Instance, st: &Settings, pid: &str)
     };
 
     let mut jvm: Vec<String> = Vec::new();
-    let ram = fit_ram_to_free((if inst.ram_mb > 0 { inst.ram_mb } else { st.default_ram_mb }).min(8192));
+    let ram = fit_ram_to_free((if inst.ram_mb > 0 { inst.ram_mb } else { st.default_ram_mb }).min(8192).min(half_of_ram_mb()));
     jvm.push(format!("-Xmx{ram}M"));
-    jvm.push("-Xms256M".into());
+    jvm.push(format!("-Xms{ram}M")); // ТЗ 3.6: -Xms = -Xmx
     for a in [
         "-XX:+UnlockExperimentalVMOptions",
         "-XX:+UseG1GC",
@@ -372,6 +372,13 @@ pub fn is_running(id: &str) -> bool {
 /// Several clients at once: a second launch of a running build needs its own account.
 /// Never ask the JVM for more than ~60% of the memory that is really free right now (a browser and other apps
 /// push Windows into swapping, which shows up as FPS drops); keeps at least 3 GB so heavy packs still start.
+fn half_of_ram_mb() -> u32 {
+    let mut sys = sysinfo::System::new();
+    sys.refresh_memory();
+    let total = sys.total_memory() / 1024 / 1024;
+    if total == 0 { u32::MAX } else { (total / 2) as u32 }
+}
+
 fn fit_ram_to_free(want_mb: u32) -> u32 {
     let mut sys = sysinfo::System::new();
     sys.refresh_memory();

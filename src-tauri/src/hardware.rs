@@ -55,7 +55,8 @@ pub fn detect() -> Hardware {
 pub fn smart_ram_mb(total_mb: u64, mods: usize) -> u32 {
     // ТЗ чистки 5.2: 8 ГБ ОЗУ -> 3 ГБ, 16 -> 4, 32 -> 6; слабым машинам не больше половины памяти
     let base: u64 = if total_mb < 5000 { 2048 } else if total_mb < 12000 { 3072 } else if total_mb < 24000 { 4096 } else { 6144 };
-    let want = if mods > 150 { base + 2048 } else if mods > 60 { base + 1024 } else { base };
+    let _ = mods; // ТЗ 3.6: таблица без надбавок за число модов
+    let want = base;
     let cap = (total_mb / 2).max(1536);
     (want.min(cap) / 512 * 512) as u32
 }
