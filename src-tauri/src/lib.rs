@@ -1,8 +1,10 @@
+#![recursion_limit = "512"] // the core (theseus) has deeply nested futures
 #[cfg(windows)]
 mod winapi;
 mod sunshine;
 mod auth;
 mod core;
+mod core_instances;
 mod error;
 mod hardware;
 mod hud;
@@ -243,49 +245,29 @@ fn preset_for(id: &str) -> R<()> {
 }
 
 #[tauri::command]
-fn list_instances() -> Vec<Instance> {
-    instances::list()
+async fn list_instances() -> R<Vec<Instance>> {
+    core_instances::list_instances().await
 }
 
 #[tauri::command]
-fn create_instance(req: NewInstance) -> R<Instance> {
-    let st = settings::load();
-    let name = req.name.trim();
-    if name.is_empty() {
+async fn create_instance(app: AppHandle, req: NewInstance) -> R<Instance> {
+    if req.name.trim().is_empty() {
         return Err(anyhow::anyhow!("Введите название сборки").into());
     }
-    let id = instances::unique_id(name);
-    let inst = Instance {
-        id: id.clone(),
-        name: name.into(),
-        mc_version: req.mc_version,
-        loader: req.loader,
-        loader_version: req.loader_version,
-        hud_enabled: req.hud_enabled,
-        account_id: req.account_id,
-        created_at: instances::now(),
-        ram_mb: smart_ram(),
-        ..Default::default()
-    };
-    instances::save(&inst)?;
-    std::fs::create_dir_all(instances::game_dir(&id).join("mods"))?;
-    if st.apply_preset {
-        preset_for(&id)?;
-    }
-    Ok(inst)
+    core_instances::create_instance(&app, &req).await
 }
 
 #[tauri::command]
-fn update_instance(instance: Instance) -> R<()> {
-    instances::save(&instance)
+async fn update_instance(instance: Instance) -> R<()> {
+    core_instances::update_instance(&instance).await
 }
 
 #[tauri::command]
-fn delete_instance(id: String) -> R<()> {
-    if launch::is_running(&id) {
+async fn delete_instance(id: String) -> R<()> {
+    if core_instances::running().await?.contains(&id) {
         return Err(anyhow::anyhow!("Сначала закройте игру").into());
     }
-    instances::delete(&id)
+    core_instances::delete_instance(&id).await
 }
 
 #[tauri::command]
@@ -355,22 +337,9 @@ fn read_options(id: String) -> String {
 // ---------- install / launch ----------
 
 #[tauri::command]
-async fn install_instance(app: AppHandle, id: String) -> R<()> {
-    let st = settings::load();
-    let mut inst = instances::get(&id)?;
-    let pid = format!("install:{id}");
-    net::emit_progress(&app, &pid, "Подготовка", 0.0, 0.0, false, None);
-    match launch::ensure_installed(&app, &mut inst, &st, &pid).await {
-        Ok(()) => {
-            net::emit_progress(&app, &pid, "Готово", 100.0, 0.0, true, None);
-            Ok(())
-        }
-        Err(e) => {
-            applog(&format!("install {id} failed: {e}"));
-            net::emit_progress(&app, &pid, "Ошибка", 0.0, 0.0, true, Some(e.0.clone()));
-            Err(e)
-        }
-    }
+async fn install_instance(_app: AppHandle, id: String) -> R<()> {
+    // the core installs the instance right after it is created (progress arrives as `install:<id>`)
+    core_instances::wait_installed(&id).await
 }
 
 #[tauri::command]
@@ -387,37 +356,45 @@ async fn launch_instance(app: AppHandle, id: String, account_id: Option<String>)
     let mut st = settings::load();
     st.last_instance = id.clone();
     let _ = settings::save(&st);
+    let minimize = st.minimize_on_launch;
     let app2 = app.clone();
     tauri::async_runtime::spawn(async move {
         let pid = format!("launch:{id}");
-        let res = launch::launch(app2.clone(), id.clone(), account_id).await;
-        if let Err(e) = res {
-            applog(&format!("launch {id} failed: {e}"));
-            net::emit_progress(&app2, &pid, "Ошибка", 0.0, 0.0, true, Some(e.0));
-        }
-        if let Some(w) = app2.get_webview_window("main") {
-            let _ = w.show();
+        match core_instances::launch(&app2, &id, account_id).await {
+            Ok(()) => {
+                if minimize {
+                    if let Some(w) = app2.get_webview_window("main") {
+                        let _ = w.hide();
+                        #[cfg(windows)]
+                        crate::winapi::webview_suspend(&w, true);
+                    }
+                }
+            }
+            Err(e) => {
+                applog(&format!("launch {id} failed: {e}"));
+                net::emit_progress(&app2, &pid, "Ошибка", 0.0, 0.0, true, Some(e.0));
+                if let Some(w) = app2.get_webview_window("main") {
+                    let _ = w.show();
+                }
+            }
         }
     });
     Ok(())
 }
 
 #[tauri::command]
-fn cancel_launch(id: String) -> R<()> {
-    launch::cancel(&id)
+fn cancel_launch(_id: String) -> R<()> {
+    Ok(())
 }
 
 #[tauri::command]
-fn kill_instance(id: String) -> R<()> {
-    launch::kill(&id)
+async fn kill_instance(id: String) -> R<()> {
+    core_instances::kill(&id).await
 }
 
 #[tauri::command]
-fn running_instances() -> Vec<String> {
-    let mut v: Vec<String> = launch::RUNNING.lock().unwrap().keys().map(|k| k.split('~').next().unwrap_or(k).to_string()).collect();
-    v.sort();
-    v.dedup();
-    v
+async fn running_instances() -> R<Vec<String>> {
+    core_instances::running().await
 }
 
 #[tauri::command]
@@ -959,57 +936,58 @@ async fn selftest_run(app: AppHandle, mc: String, loader: String) -> i32 {
         Err(e) => { say!("SELFTEST FAIL loader versions: {}", e); return 1; }
     };
     say!("loader version: {lv}");
-    // offline account (bypasses licence check on purpose, test only)
-    let acc = auth::Account { id: "selftest".into(), kind: "offline".into(), username: "Selftest".into(), uuid: auth::offline_uuid("Selftest"), skin_url: String::new() };
     if std::env::var("NOCTURNUM_HOME").map(|v| v.trim().is_empty()).unwrap_or(true) {
-        say!("SELFTEST FAIL: set NOCTURNUM_HOME to an empty folder first (the test writes its own accounts.json)");
+        say!("SELFTEST FAIL: set NOCTURNUM_HOME to an empty folder first (the test uses its own database)");
         return 1;
     }
-    let _ = std::fs::create_dir_all(paths::root());
-    std::fs::write(paths::accounts_file(), serde_json::to_vec(&serde_json::json!({"accounts": [acc]})).unwrap()).unwrap();
+    // the core starts in the background; the test account exists in debug builds only
+    if let Err(e) = theseus::State::get().await {
+        say!("SELFTEST FAIL core init: {e}");
+        return 1;
+    }
+    if let Err(e) = theseus::minecraft_auth::add_test_account("Selftest", uuid::Uuid::new_v3(&uuid::Uuid::NAMESPACE_OID, b"OfflinePlayer:Selftest")).await {
+        say!("SELFTEST FAIL test account: {e}");
+        return 1;
+    }
     let hud_on = std::env::args().any(|a| a == "hud");
-    let inst = match create_instance(NewInstance { name: format!("test {mc} {loader}"), mc_version: mc.clone(), loader: loader.clone(), loader_version: lv, hud_enabled: hud_on, account_id: "selftest".into() }) {
+    let inst = match create_instance(app.clone(), NewInstance { name: format!("test {mc} {loader}"), mc_version: mc.clone(), loader: loader.clone(), loader_version: lv, hud_enabled: hud_on, account_id: "selftest".into() }).await {
         Ok(i) => i,
         Err(e) => { say!("SELFTEST FAIL create: {}", e); return 1; }
     };
     say!("instance {}", inst.id);
     if let Some(b) = media::bridge() { say!("MEDIA {} {}", b.port, b.token); }
-    if let Ok(dbg) = std::env::var("NOCTURNUM_DEBUG") {
-        if let Ok(mut i) = instances::get(&inst.id) {
-            i.jvm_args = format!("-Dnocturnum.debug={dbg}");
-            i.width = 1600;
-            i.height = 900;
-            let _ = instances::save(&i);
-        }
+    if let Err(e) = core_instances::wait_installed(&inst.id).await {
+        say!("SELFTEST FAIL install: {e}");
+        return 1;
     }
-    let opts = read_options(inst.id.clone());
-    say!("options.txt:
-{opts}");
+    say!("installed");
     let id = inst.id.clone();
     let app2 = app.clone();
     let finished = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let fin2 = finished.clone();
     tauri::async_runtime::spawn(async move {
-        if let Err(e) = launch::launch(app2, id, None).await {
+        if let Err(e) = core_instances::launch(&app2, &id, None).await {
             println!("LAUNCH ERROR: {}", e);
         }
         fin2.store(true, std::sync::atomic::Ordering::SeqCst);
     });
+    let log_path = theseus::instance::get_full_path(&inst.id).await.ok().map(|p| p.join("logs").join("latest.log"));
     // wait for game window creation signs in log or exit
     let start = std::time::Instant::now();
     let mut printed = 0usize;
     let mut joined_at: Option<std::time::Instant> = None;
     loop {
         tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-        let log = launch::get_log(&inst.id);
+        let text = log_path.as_ref().and_then(|p| std::fs::read_to_string(p).ok()).unwrap_or_default();
+        let log: Vec<&str> = text.lines().collect();
         while printed < log.len() { say!("GAME| {}", log[printed]); printed += 1; }
-        let running = launch::RUNNING.lock().unwrap().contains_key(&inst.id);
+        let running = core_instances::running().await.map(|v| v.contains(&inst.id)).unwrap_or(false);
         let joined = log.iter().any(|l| l.contains("Backend library") || l.contains("Reloading ResourceManager") || l.contains("Narrator library") || l.contains("OpenAL initialized") || l.contains("Sound engine started"));
         let hold = std::env::var("NOCTURNUM_HOLD").ok().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
         if joined && joined_at.is_none() { joined_at = Some(std::time::Instant::now()); }
         if joined && hold > 0 && joined_at.map(|t| t.elapsed().as_secs() < hold).unwrap_or(true) { continue; }
-        if joined { say!("SELFTEST OK: game reached resource loading"); let _ = launch::kill(&inst.id); tokio::time::sleep(std::time::Duration::from_secs(2)).await; return 0; }
+        if joined { say!("SELFTEST OK: game reached resource loading"); let _ = core_instances::kill(&inst.id).await; tokio::time::sleep(std::time::Duration::from_secs(2)).await; return 0; }
         if !running && finished.load(std::sync::atomic::Ordering::SeqCst) { say!("SELFTEST FAIL: game not running / exited"); return 1; }
-        if start.elapsed().as_secs() > 900 { say!("SELFTEST FAIL: timeout"); let _ = launch::kill(&inst.id); return 1; }
+        if start.elapsed().as_secs() > 900 { say!("SELFTEST FAIL: timeout"); let _ = core_instances::kill(&inst.id).await; return 1; }
     }
 }

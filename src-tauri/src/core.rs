@@ -11,16 +11,20 @@ use theseus::prelude::*;
 
 /// Start the core state (SQLite database, settings, Java and version metadata). Data folder: the "Nocturnum" folder.
 pub async fn init() -> R<()> {
-    theseus::State::init("Nocturnum".to_string()).await.map_err(|e| anyhow!("{e}"))?;
+    // an absolute path as "application identifier" makes the core keep everything in <data root>/core:
+    // it never touches the old launcher files and follows NOCTURNUM_HOME / portable mode
+    let dir = crate::paths::root().join("core");
+    std::fs::create_dir_all(&dir)?;
+    theseus::State::init(dir.to_string_lossy().to_string()).await.map_err(|e| anyhow!("{e}"))?;
     Ok(())
 }
 
-fn err(e: theseus::Error) -> crate::error::AppError {
+pub(crate) fn err(e: theseus::Error) -> crate::error::AppError {
     crate::error::AppError(auth_message(&e.to_string()))
 }
 
 /// XSTS / Mojang errors in plain Russian (spec 3.1).
-fn auth_message(raw: &str) -> String {
+pub(crate) fn auth_message(raw: &str) -> String {
     let pairs: &[(&str, &str)] = &[
         ("2148916233", "У этого аккаунта Microsoft нет профиля Xbox. Создайте его на xbox.com."),
         ("2148916235", "Xbox Live недоступен в стране этого аккаунта."),
