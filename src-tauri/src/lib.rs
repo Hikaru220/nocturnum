@@ -241,7 +241,7 @@ fn smart_ram() -> u32 {
     hardware::smart_ram_mb(sys.total_memory() / 1024 / 1024, 0)
 }
 
-fn preset_for(id: &str) -> R<()> {
+pub(crate) fn preset_for(id: &str) -> R<()> {
     let st = settings::load();
     let tier = if st.perf_tier == "auto" { hardware::detect().tier } else { st.perf_tier.clone() };
     instances::write_preset_tier(id, &tier)

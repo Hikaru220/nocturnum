@@ -159,8 +159,16 @@ pub async fn create_instance(app: &AppHandle, req: &crate::NewInstance) -> R<UiI
     let id2 = id.clone();
     tauri::async_runtime::spawn(async move {
         // the interface is told "done" only after the mod set is in place
-        if follow_job(&app2, &ev, &jid, !with_mods).await.is_ok() && with_mods {
-            crate::core_mods::install_set(&app2, &id2, &mc, &loader).await;
+        if follow_job(&app2, &ev, &jid, false).await.is_ok() {
+            // first-run game settings by hardware tier (spec 3.6), written once, the player's changes are never touched later
+            if crate::settings::load().apply_preset {
+                let _ = crate::preset_for(&id2);
+            }
+            if with_mods {
+                crate::core_mods::install_set(&app2, &id2, &mc, &loader).await;
+            } else {
+                net::emit_progress(&app2, &ev, "Готово", 100.0, 0.0, true, None);
+            }
         }
     });
     get_instance(&id).await
