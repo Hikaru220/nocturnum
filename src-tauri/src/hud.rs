@@ -124,7 +124,42 @@ pub async fn install(app: &AppHandle, inst: &Instance) -> R<()> {
     }
     // safety net: required `depends` from every jar's fabric.mod.json must be present
     fix_missing_deps(app, &pid, inst).await;
+    tune_dynamic_fps(&mods);
     Ok(())
+}
+
+/// Dynamic FPS defaults throttle a window that is merely not focused (1 FPS) or only hovered (60 FPS), which makes the
+/// game crawl while a browser is open next to it. Keep full speed there; a minimised window (0 FPS) and a long idle
+/// (10 FPS) still save resources. A config the player has already changed is never touched.
+fn tune_dynamic_fps(mods: &std::path::Path) {
+    let has = std::fs::read_dir(mods).map(|rd| rd.flatten().any(|e| e.file_name().to_string_lossy().starts_with("dynamic-fps"))).unwrap_or(false);
+    if !has {
+        return;
+    }
+    let Some(game) = mods.parent() else { return };
+    let cfg = game.join("config").join("dynamic_fps.json");
+    let current = std::fs::read_to_string(&cfg).unwrap_or_default();
+    if !current.trim().is_empty() && current.trim() != "{}" {
+        return;
+    }
+    let state = |fps: i32, vol: f64| serde_json::json!({
+        "frame_rate_target": fps, "enable_vsync": "false", "volume_multipliers": if vol < 1.0 { serde_json::json!({"master": vol}) } else { serde_json::json!({}) },
+        "graphics_state": "default", "show_toasts": false, "run_garbage_collector": false
+    });
+    let v = serde_json::json!({
+        "enabled": true, "uncap_menu_frame_rate": true, "ignore_initial_click": "disabled",
+        "idle": {"timeout": 300, "condition": "vanilla"},
+        "states": {
+            "hovered": state(-1, 1.0),
+            "unfocused": state(-1, 1.0),
+            "invisible": state(0, 0.0),
+            "unplugged": state(-1, 1.0),
+            "abandoned": state(10, 1.0)
+        },
+        "download_natives": false, "mock_battery_data": false
+    });
+    let _ = std::fs::create_dir_all(cfg.parent().unwrap());
+    let _ = std::fs::write(&cfg, serde_json::to_vec_pretty(&v).unwrap_or_default());
 }
 
 /// Mod ids a jar provides (own id, `provides`, nested jars) and ids it requires.

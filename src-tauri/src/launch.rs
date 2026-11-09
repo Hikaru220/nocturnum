@@ -225,7 +225,7 @@ pub async fn prepare(app: &AppHandle, inst: &Instance, st: &Settings, pid: &str)
     };
 
     let mut jvm: Vec<String> = Vec::new();
-    let ram = (if inst.ram_mb > 0 { inst.ram_mb } else { st.default_ram_mb }).min(8192);
+    let ram = fit_ram_to_free((if inst.ram_mb > 0 { inst.ram_mb } else { st.default_ram_mb }).min(8192));
     jvm.push(format!("-Xmx{ram}M"));
     jvm.push("-Xms256M".into());
     for a in [
@@ -370,6 +370,19 @@ pub fn is_running(id: &str) -> bool {
 }
 
 /// Several clients at once: a second launch of a running build needs its own account.
+/// Never ask the JVM for more than ~60% of the memory that is really free right now (a browser and other apps
+/// push Windows into swapping, which shows up as FPS drops); keeps at least 3 GB so heavy packs still start.
+fn fit_ram_to_free(want_mb: u32) -> u32 {
+    let mut sys = sysinfo::System::new();
+    sys.refresh_memory();
+    let avail_mb = sys.available_memory() / 1024 / 1024;
+    if avail_mb == 0 {
+        return want_mb;
+    }
+    let cap = ((avail_mb as f64 * 0.6) as u32).max(3072) / 512 * 512;
+    want_mb.min(cap)
+}
+
 pub async fn launch(app: AppHandle, instance_id: String, account_override: Option<String>) -> R<()> {
     if is_running(&instance_id) && account_override.is_none() {
         return Err(anyhow!("Игра уже запущена").into());
