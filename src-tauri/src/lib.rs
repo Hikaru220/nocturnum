@@ -17,7 +17,6 @@ mod hardware;
 mod hud;
 mod instances;
 mod java;
-mod launch;
 mod loaders;
 mod media;
 mod modrinth;
@@ -178,7 +177,7 @@ async fn create_backup(id: String) -> R<Option<String>> {
 
 #[tauri::command]
 async fn restore_backup(id: String, file_name: String) -> R<()> {
-    if launch::is_running(&id) {
+    if core_instances::running().await?.iter().any(|r| r == &id) {
         return Err(anyhow::anyhow!("Сначала закройте игру").into());
     }
     tauri::async_runtime::spawn_blocking(move || backups::restore(&id, &file_name)).await.map_err(|e| anyhow::anyhow!("{e}"))?
