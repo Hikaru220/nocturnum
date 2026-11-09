@@ -967,7 +967,10 @@ async fn selftest_run(app: AppHandle, mc: String, loader: String) -> i32 {
         }
         fin2.store(true, std::sync::atomic::Ordering::SeqCst);
     });
-    let log_path = theseus::instance::get_full_path(&inst.id).await.ok().map(|p| p.join("logs").join("latest.log"));
+    let log_path = match theseus::instance::get_full_path(&inst.id).await {
+        Ok(p) => { say!("log dir {}", p.display()); Some(p.join("logs").join("latest.log")) }
+        Err(e) => { say!("SELFTEST: no instance path: {e}"); None }
+    };
     // wait for game window creation signs in log or exit
     let start = std::time::Instant::now();
     let mut printed = 0usize;
