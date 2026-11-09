@@ -6,7 +6,7 @@ use crate::instances::Instance as UiInstance;
 use crate::{error::R, net};
 use anyhow::anyhow;
 use std::collections::HashMap;
-use tauri::{AppHandle, Emitter};
+use tauri::{Manager, AppHandle, Emitter};
 use theseus::install::{InstallJobSnapshot, InstallJobStatus, InstallPhaseId};
 use theseus::prelude::*;
 
@@ -221,11 +221,20 @@ pub async fn launch(app: &AppHandle, id: &str, account_id: Option<String>) -> R<
     let _ = app.emit("game-started", id.to_string());
     let app2 = app.clone();
     let id2 = id.to_string();
+    let started = std::time::SystemTime::now();
     tauri::async_runtime::spawn(async move {
         let _ = theseus::process::wait_for(meta.uuid).await;
         let still = running().await.map(|v| v.contains(&id2)).unwrap_or(false);
         if !still {
-            let _ = app2.emit("game-exit", serde_json::json!({ "instanceId": id2, "code": 0, "hint": null }));
+            let hint = crate::core_misc::analyze_crash(&id2, started).await;
+            let code = if hint.is_some() { 1 } else { 0 };
+            let _ = app2.emit("game-exit", serde_json::json!({ "instanceId": id2, "code": code, "hint": hint }));
+            // the sleeping launcher wakes up: window shown and WebView2 resumed
+            if let Some(w) = app2.get_webview_window("main") {
+                #[cfg(windows)]
+                crate::winapi::webview_suspend(&w, false);
+                let _ = w.show();
+            }
         }
     });
     Ok(())
