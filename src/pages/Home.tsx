@@ -28,6 +28,12 @@ function SunShineBanner() {
     try {
       // one click: reuse the 26.2 Fabric build or create it (with the HUD mod), then join the server
       let inst = instances.find((i) => i.mcVersion === "26.2" && i.loader === "fabric");
+      // the server checks the licence: an offline profile cannot join, so say it before the game starts
+      const accId = inst?.accountId || settings?.lastAccount || accounts[0]?.id || "";
+      if (accounts.find((a) => a.id === accId)?.kind === "offline") {
+        toast("error", t("home.sunshineLicense"));
+        return;
+      }
       if (!inst) {
         const lvs = await api.loaderVersions("fabric", "26.2");
         const lv = (lvs.find((x) => x.stable) ?? lvs[0])?.version ?? "";
@@ -120,7 +126,7 @@ export default function Home() {
       {instances.length > 1 && (
         <section>
           <h2 className="text-lg font-bold mb-3">{t("home.recent")}</h2>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
             {instances.slice(0, 6).map((i) => (
               <Card
                 key={i.id}

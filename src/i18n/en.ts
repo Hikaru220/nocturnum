@@ -67,6 +67,7 @@ const en: Record<Key, string> = {
   "home.sunshineOnline": "Online {online}/{max} · ping {ping} ms",
   "home.sunshineOffline": "Server is not responding",
   "home.sameAccount": "same account",
+  "home.sunshineLicense": "SunShine only accepts licensed Microsoft accounts. An offline profile cannot join.",
   "home.extra": "Another client",
   "home.extraHint": "Start one more copy of the game with another account",
   "home.stop": "Stop game",

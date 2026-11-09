@@ -260,6 +260,12 @@ public final class ClickGuiView extends View {
         float vw = width / uiScale, vh = height / uiScale;
         float vmx = mx / uiScale, vmy = my / uiScale;
         defaultPositions(vw);
+        // a saved layout from another window size must never leave a column off screen
+        for (String cid : columnOrder()) {
+            Col cc = col(cid);
+            cc.x = Math.max(0f, Math.min(cc.x, vw - COL_W));
+            cc.y = Math.max(0f, Math.min(cc.y, vh - HEAD_H - 4f));
+        }
 
         g.fill(0, 0, width, height, Colors.withAlpha(0x05050C, Math.round(150 * k)));
         ui.begin(vmx, vmy);

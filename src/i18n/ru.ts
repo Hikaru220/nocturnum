@@ -69,6 +69,7 @@ const ru = {
   "home.sunshineOffline": "Сервер сейчас не отвечает",
   "home.stop": "Остановить игру",
   "home.sameAccount": "тот же аккаунт",
+  "home.sunshineLicense": "SunShine пускает только с лицензионным аккаунтом Microsoft. Офлайн-профиль на сервер не зайдёт.",
   "home.extra": "Ещё клиент",
   "home.extraHint": "Запустить ещё одну копию игры с другим аккаунтом",
   "home.cancel": "Отменить запуск",
