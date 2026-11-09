@@ -16,6 +16,8 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
+# NOCTURNUM: launcher core = Modrinth App library (fork branch "nocturnum", see NOCTURNUM_CHANGES.md there)
+theseus = { path = "../../nocturnum-core/code/packages/app-lib" }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-window-state = "2"

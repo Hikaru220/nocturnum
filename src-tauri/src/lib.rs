@@ -2,6 +2,7 @@
 mod winapi;
 mod sunshine;
 mod auth;
+mod core;
 mod error;
 mod hardware;
 mod hud;
@@ -452,13 +453,13 @@ fn apply_crash_fix(id: String, action: String) -> R<()> {
 // ---------- accounts ----------
 
 #[tauri::command]
-fn list_accounts() -> Vec<auth::Account> {
-    auth::list()
+async fn list_accounts() -> R<Vec<auth::Account>> {
+    core::list_accounts().await
 }
 
 #[tauri::command]
 async fn login_microsoft(app: AppHandle) -> R<auth::Account> {
-    let r = auth::login_microsoft(&app, &settings::ms_client_id()).await;
+    let r = core::login_microsoft(&app).await;
     if let Err(e) = &r {
         applog(&format!("ms login failed: {e}"));
     }
@@ -479,7 +480,7 @@ async fn check_discord(app_id: String) -> rpc::DiscordCheck {
 
 #[tauri::command]
 fn cancel_login() {
-    auth::CANCEL.store(true, std::sync::atomic::Ordering::SeqCst);
+    core::cancel_login();
 }
 
 #[tauri::command]
@@ -488,8 +489,8 @@ fn add_offline_account(name: String) -> R<auth::Account> {
 }
 
 #[tauri::command]
-fn remove_account(id: String) -> R<()> {
-    auth::remove(&id)
+async fn remove_account(id: String) -> R<()> {
+    core::remove_account(&id).await
 }
 
 // ---------- java ----------
@@ -827,6 +828,12 @@ pub fn run() {
         .manage(Startup(std::sync::Mutex::new(launch_arg)))
         .setup(move |app| {
             let handle = app.handle().clone();
+            // the core (Modrinth App library) starts in the background; commands wait for it
+            tauri::async_runtime::spawn(async {
+                if let Err(e) = core::init().await {
+                    applog(&format!("core init failed: {e}"));
+                }
+            });
             #[cfg(debug_assertions)]
             if let Some((mc, loader)) = selftest.clone() {
                 let h = handle.clone();
