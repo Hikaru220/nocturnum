@@ -7,6 +7,7 @@ mod core;
 mod core_instances;
 mod core_content;
 mod core_mods;
+mod core_misc;
 mod core_packs;
 mod core_java;
 mod core_skins;
@@ -400,8 +401,8 @@ async fn running_instances() -> R<Vec<String>> {
 }
 
 #[tauri::command]
-fn diagnostics(id: String, only_cmd: bool) -> String {
-    launch::diagnostics(&id, only_cmd)
+async fn diagnostics(id: String, only_cmd: bool) -> String {
+    core_misc::diagnostics(&id, only_cmd).await
 }
 
 #[tauri::command]
@@ -435,13 +436,8 @@ fn game_log(id: String) -> Vec<String> {
 }
 
 #[tauri::command]
-fn apply_crash_fix(id: String, action: String) -> R<()> {
-    let mut inst = instances::get(&id)?;
-    if let Some(mb) = action.strip_prefix("ram:") {
-        inst.ram_mb = mb.parse().unwrap_or(6144);
-        instances::save(&inst)?;
-    }
-    Ok(())
+async fn apply_crash_fix(id: String, action: String) -> R<()> {
+    core_misc::apply_crash_fix(&id, &action).await
 }
 
 // ---------- accounts ----------
@@ -583,28 +579,9 @@ async fn install_modpack(app: AppHandle, project_id: String, version_id: Option<
 
 #[tauri::command]
 async fn update_modpack(app: AppHandle, id: String) -> R<bool> {
-    let mut inst = instances::get(&id)?;
-    if inst.modpack_project.is_empty() {
-        return Err(anyhow::anyhow!("Эта сборка не из модпака").into());
-    }
-    let latest = modrinth::project_versions(&inst.modpack_project, &[], &[]).await?.into_iter().next().ok_or_else(|| anyhow::anyhow!("Нет версий"))?;
-    let vid = latest["id"].as_str().unwrap_or("").to_string();
-    if vid == inst.modpack_version {
-        return Ok(false);
-    }
-    let file = latest["files"].as_array().and_then(|f| f.first()).cloned().ok_or_else(|| anyhow::anyhow!("Нет файла"))?;
-    let tmp = paths::cache_dir().join(format!("{}.mrpack", inst.modpack_project));
-    net::download_file(file["url"].as_str().unwrap_or(""), &tmp, &net::Hash::None, None).await?;
     let bid = id.clone();
     let _ = tauri::async_runtime::spawn_blocking(move || backups::create(&bid)).await; // safety copy first
-    let st = settings::load();
-    let pid = format!("modpack:update:{id}");
-    modrinth::apply_mrpack(&app, &pid, &inst, &tmp, true, st.downloads_threads as usize).await?;
-    inst.modpack_version = vid;
-    instances::save(&inst)?;
-    let _ = std::fs::remove_file(&tmp);
-    net::emit_progress(&app, &pid, "Модпак обновлён", 100.0, 0.0, true, None);
-    Ok(true)
+    core_misc::update_modpack(&app, &id).await
 }
 
 #[tauri::command]
