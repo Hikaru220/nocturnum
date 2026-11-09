@@ -8,6 +8,8 @@ mod core_instances;
 mod core_content;
 mod core_mods;
 mod core_packs;
+mod core_java;
+mod core_skins;
 mod error;
 mod hardware;
 mod hud;
@@ -488,12 +490,12 @@ async fn remove_account(id: String) -> R<()> {
 
 #[tauri::command]
 async fn detect_java() -> R<Vec<java::JavaInfo>> {
-    Ok(tauri::async_runtime::spawn_blocking(java::detect_all).await?)
+    core_java::detect().await
 }
 
 #[tauri::command]
-fn validate_java(path: String) -> R<java::JavaInfo> {
-    java::validate(&path)
+async fn validate_java(path: String) -> R<java::JavaInfo> {
+    core_java::validate(&path).await
 }
 
 // ---------- modrinth ----------
@@ -668,11 +670,8 @@ async fn skin_by_name(name: String) -> R<SkinData> {
 
 #[tauri::command]
 async fn skin_of_account(id: String) -> R<SkinData> {
-    let a = auth::get(&id)?;
-    if a.kind != "microsoft" {
-        return Err(anyhow::anyhow!("У офлайн-профиля нет скина на сервере").into());
-    }
-    let (b, slim) = skins::fetch_by_uuid(&a.uuid).await?;
+    let uuid = core_skins::uuid_of(&id).await?;
+    let (b, slim) = skins::fetch_by_uuid(&uuid).await?;
     Ok(SkinData { data_url: png_data_url(&b), slim })
 }
 
@@ -701,7 +700,7 @@ fn skin_delete(name: String) -> R<()> {
 async fn skin_upload(account_id: String, data_url: String, slim: bool) -> R<()> {
     let png = decode_png(&data_url)?;
     skins::check_png(&png)?;
-    auth::upload_skin(&account_id, &settings::ms_client_id(), png, slim).await
+    core_skins::upload(&account_id, png, slim).await
 }
 
 // ---------- startup / tray ----------
@@ -925,7 +924,14 @@ async fn selftest_run(app: AppHandle, mc: String, loader: String) -> i32 {
         return 1;
     }
     let hud_on = std::env::args().any(|a| a == "hud");
-    let inst = match create_instance(app.clone(), NewInstance { name: format!("test {mc} {loader}"), mc_version: mc.clone(), loader: loader.clone(), loader_version: lv, hud_enabled: hud_on, account_id: "selftest".into() }).await {
+    // NOCTURNUM_REUSE=1: launch the instance a previous run left behind (skips the long install)
+    let reuse = if std::env::var("NOCTURNUM_REUSE").is_ok() {
+        match core_instances::list_instances().await {
+            Ok(v) => v.into_iter().find(|i| i.name == format!("test {mc} {loader}")),
+            Err(_) => None,
+        }
+    } else { None };
+    let inst = match if let Some(i) = reuse { Ok(i) } else { create_instance(app.clone(), NewInstance { name: format!("test {mc} {loader}"), mc_version: mc.clone(), loader: loader.clone(), loader_version: lv, hud_enabled: hud_on, account_id: "selftest".into() }).await } {
         Ok(i) => i,
         Err(e) => { say!("SELFTEST FAIL create: {}", e); return 1; }
     };
@@ -936,6 +942,22 @@ async fn selftest_run(app: AppHandle, mc: String, loader: String) -> i32 {
         return 1;
     }
     say!("installed");
+    if hud_on {
+        // the mod set is installed in the background after the game files: wait for it (HUD jar and Fabric API)
+        let dir = theseus::instance::get_full_path(&inst.id).await.ok();
+        let t0 = std::time::Instant::now();
+        let (mut last, mut stable_since) = (0usize, std::time::Instant::now());
+        loop {
+            let n = dir.as_ref().and_then(|d| std::fs::read_dir(d.join("mods")).ok()).map(|rd| rd.flatten().filter(|e| e.file_name().to_string_lossy().ends_with(".jar")).count()).unwrap_or(0);
+            if n != last { last = n; stable_since = std::time::Instant::now(); }
+            // done when the number of jars has not changed for a minute (and at least the HUD and Fabric API are there)
+            if last >= 3 && stable_since.elapsed().as_secs() > 60 { break; }
+            if t0.elapsed().as_secs() > 900 { break; }
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        }
+        let mods: Vec<String> = dir.as_ref().and_then(|d| std::fs::read_dir(d.join("mods")).ok()).map(|rd| rd.flatten().map(|e| e.file_name().to_string_lossy().to_string()).collect()).unwrap_or_default();
+        say!("mods ({}): {}", mods.len(), mods.join(", "));
+    }
     let id = inst.id.clone();
     let app2 = app.clone();
     let finished = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -956,7 +978,7 @@ async fn selftest_run(app: AppHandle, mc: String, loader: String) -> i32 {
     let mut joined_at: Option<std::time::Instant> = None;
     loop {
         tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-        let text = log_path.as_ref().and_then(|p| std::fs::read_to_string(p).ok()).unwrap_or_default();
+        let text = log_path.as_ref().and_then(|p| std::fs::read(p).ok()).map(|b| String::from_utf8_lossy(&b).to_string()).unwrap_or_default();
         let log: Vec<&str> = text.lines().collect();
         while printed < log.len() { say!("GAME| {}", log[printed]); printed += 1; }
         let running = core_instances::running().await.map(|v| v.contains(&inst.id)).unwrap_or(false);
