@@ -5,6 +5,8 @@ mod sunshine;
 mod auth;
 mod core;
 mod core_instances;
+mod core_content;
+mod core_mods;
 mod error;
 mod hardware;
 mod hud;
@@ -305,23 +307,23 @@ fn create_shortcut(id: String) -> R<()> {
 }
 
 #[tauri::command]
-fn list_content(id: String, kind: String) -> R<Vec<instances::ContentFile>> {
-    instances::list_content(&id, &kind)
+async fn list_content(id: String, kind: String) -> R<Vec<instances::ContentFile>> {
+    core_content::list_content(&id, &kind).await
 }
 
 #[tauri::command]
-fn toggle_content(id: String, kind: String, file: String, enable: bool) -> R<()> {
-    instances::toggle_content(&id, &kind, &file, enable)
+async fn toggle_content(id: String, kind: String, file: String, enable: bool) -> R<()> {
+    core_content::toggle_content(&id, &kind, &file, enable).await
 }
 
 #[tauri::command]
-fn remove_content(id: String, kind: String, file: String) -> R<()> {
-    instances::remove_content(&id, &kind, &file)
+async fn remove_content(id: String, kind: String, file: String) -> R<()> {
+    core_content::remove_content(&id, &kind, &file).await
 }
 
 #[tauri::command]
-fn add_content_file(id: String, kind: String, path: String) -> R<String> {
-    instances::add_content_file(&id, &kind, std::path::Path::new(&path))
+async fn add_content_file(id: String, kind: String, path: String) -> R<String> {
+    core_content::add_content_file(&id, &kind, &path).await
 }
 
 #[tauri::command]
@@ -509,26 +511,19 @@ async fn mr_versions(id: String, loaders: Vec<String>, game_versions: Vec<String
 
 #[tauri::command]
 async fn mr_install(app: AppHandle, instance_id: String, project_id: String, version_id: Option<String>, project_type: String) -> R<Vec<String>> {
-    let inst = instances::get(&instance_id)?;
-    let pid = format!("mod:{project_id}");
-    let r = modrinth::install_project(&app, &pid, &inst, &project_id, version_id, &project_type).await;
-    if let Err(e) = &r {
-        net::emit_progress(&app, &pid, "Ошибка", 0.0, 0.0, true, Some(e.0.clone()));
-    }
-    r
+    core_content::install_project(&app, &instance_id, &project_id, version_id, &project_type).await
 }
 
 #[tauri::command]
 async fn mr_check_updates(instance_id: String) -> R<Vec<modrinth::UpdateInfo>> {
-    modrinth::check_updates(&instances::get(&instance_id)?).await
+    core_content::check_updates(&instance_id).await
 }
 
 #[tauri::command]
 async fn mr_update_all(app: AppHandle, instance_id: String) -> R<usize> {
-    let inst = instances::get(&instance_id)?;
-    let bid = inst.id.clone();
+    let bid = instance_id.clone();
     let _ = tauri::async_runtime::spawn_blocking(move || backups::create(&bid)).await; // safety copy first
-    modrinth::update_all(&app, &format!("update:{instance_id}"), &inst).await
+    core_content::update_all(&app, &instance_id).await
 }
 
 // ---------- modpacks ----------

@@ -73,6 +73,14 @@ pub fn status(app: &AppHandle, mc: &str, loader: &str) -> HudStatus {
     HudStatus { supported: true, reason: String::new(), versions }
 }
 
+/// Path of the bundled HUD jar for a game version (for the core, which copies it into the instance itself).
+pub(crate) fn bundled_jar(app: &AppHandle, mc: &str) -> Option<PathBuf> {
+    let (dir, m) = manifest(app)?;
+    let file = m["versions"][mc].as_str()?;
+    let p = dir.join(file);
+    if p.exists() { Some(p) } else { None }
+}
+
 pub async fn install(app: &AppHandle, inst: &Instance) -> R<()> {
     let st = status(app, &inst.mc_version, &inst.loader);
     if !st.supported {
@@ -131,7 +139,7 @@ pub async fn install(app: &AppHandle, inst: &Instance) -> R<()> {
 /// Dynamic FPS defaults throttle a window that is merely not focused (1 FPS) or only hovered (60 FPS), which makes the
 /// game crawl while a browser is open next to it. Keep full speed there; a minimised window (0 FPS) and a long idle
 /// (10 FPS) still save resources. A config the player has already changed is never touched.
-fn tune_dynamic_fps(mods: &std::path::Path) {
+pub(crate) fn tune_dynamic_fps(mods: &std::path::Path) {
     let has = std::fs::read_dir(mods).map(|rd| rd.flatten().any(|e| e.file_name().to_string_lossy().starts_with("dynamic-fps"))).unwrap_or(false);
     if !has {
         return;
@@ -163,7 +171,7 @@ fn tune_dynamic_fps(mods: &std::path::Path) {
 }
 
 /// Mod ids a jar provides (own id, `provides`, nested jars) and ids it requires.
-fn scan_jar(path: &std::path::Path, provided: &mut std::collections::HashSet<String>, required: &mut std::collections::HashSet<String>, depth: u8) {
+pub(crate) fn scan_jar(path: &std::path::Path, provided: &mut std::collections::HashSet<String>, required: &mut std::collections::HashSet<String>, depth: u8) {
     let Ok(f) = std::fs::File::open(path) else { return };
     let Ok(mut z) = zip::ZipArchive::new(f) else { return };
     scan_zip(&mut z, provided, required, depth);
@@ -207,7 +215,7 @@ fn scan_zip<R: std::io::Read + std::io::Seek>(z: &mut zip::ZipArchive<R>, provid
 }
 
 /// Missing ids that are not real downloadable mods (platform / bundled API modules).
-fn builtin_dep(id: &str) -> bool {
+pub(crate) fn builtin_dep(id: &str) -> bool {
     matches!(id, "minecraft" | "java" | "fabricloader" | "fabric" | "quilt_loader" | "fabric-api") || (id.starts_with("fabric-") && !id.starts_with("fabric-language-"))
 }
 

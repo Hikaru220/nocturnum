@@ -66,13 +66,24 @@ pub fn set_server(id: &str, server: &str) {
     let _ = std::fs::write(servers_file(), serde_json::to_vec(&m).unwrap_or_default());
 }
 
+/// Remembers where the core keeps an instance, so the old helpers (screenshots, backups, folder) find it.
+async fn remember_dir(id: &str) {
+    if let Ok(p) = theseus::instance::get_full_path(id).await {
+        crate::instances::remember_core_dir(id, p);
+    }
+}
+
 pub async fn list_instances() -> R<Vec<UiInstance>> {
+    for m in theseus::instance::list().await.map_err(err)? {
+        remember_dir(&m.instance.id).await;
+    }
     let mut v: Vec<UiInstance> = theseus::instance::list().await.map_err(err)?.iter().map(to_ui).collect();
     v.sort_by(|a, b| b.last_played.cmp(&a.last_played).then(b.created_at.cmp(&a.created_at)));
     Ok(v)
 }
 
 pub async fn get_instance(id: &str) -> R<UiInstance> {
+    remember_dir(id).await;
     let m = theseus::instance::get(id).await.map_err(err)?.ok_or_else(|| anyhow!("Сборка не найдена"))?;
     Ok(to_ui(&m))
 }
@@ -96,14 +107,16 @@ fn phase_label(p: InstallPhaseId) -> &'static str {
 }
 
 /// Follows an install job of the core and reports it to the interface as `progress` events.
-pub async fn follow_job(app: &AppHandle, event_id: &str, job_id: &str) -> R<()> {
+pub async fn follow_job(app: &AppHandle, event_id: &str, job_id: &str, emit_done: bool) -> R<()> {
     let job_id = uuid::Uuid::parse_str(job_id).map_err(|e| anyhow!("{e}"))?;
     loop {
         let s = theseus::install::get_job(job_id).await.map_err(err)?;
         let percent = s.progress.as_ref().filter(|p| p.total > 0).map(|p| p.current as f64 / p.total as f64 * 100.0).unwrap_or(0.0);
         match s.status {
             InstallJobStatus::Succeeded => {
-                net::emit_progress(app, event_id, "Готово", 100.0, 0.0, true, None);
+                if emit_done {
+                    net::emit_progress(app, event_id, "Готово", 100.0, 0.0, true, None);
+                }
                 return Ok(());
             }
             InstallJobStatus::Failed | InstallJobStatus::Interrupted | InstallJobStatus::Canceled => {
@@ -142,8 +155,13 @@ pub async fn create_instance(app: &AppHandle, req: &crate::NewInstance) -> R<UiI
     let app2 = app.clone();
     let ev = format!("install:{id}");
     let jid = job.job_id.clone();
+    let (mc, loader, with_mods) = (req.mc_version.clone(), req.loader.clone(), req.hud_enabled);
+    let id2 = id.clone();
     tauri::async_runtime::spawn(async move {
-        let _ = follow_job(&app2, &ev, &jid).await;
+        // the interface is told "done" only after the mod set is in place
+        if follow_job(&app2, &ev, &jid, !with_mods).await.is_ok() && with_mods {
+            crate::core_mods::install_set(&app2, &id2, &mc, &loader).await;
+        }
     });
     get_instance(&id).await
 }

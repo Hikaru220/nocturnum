@@ -36,7 +36,17 @@ pub struct Instance {
     pub modpack_version: String,
 }
 
+/// Folders of instances that live in the core (filled by `core_instances`); old-layout instances fall back to the old path.
+static CORE_DIRS: once_cell::sync::Lazy<std::sync::Mutex<std::collections::HashMap<String, PathBuf>>> = once_cell::sync::Lazy::new(Default::default);
+
+pub fn remember_core_dir(id: &str, dir: PathBuf) {
+    CORE_DIRS.lock().unwrap().insert(id.to_string(), dir);
+}
+
 pub fn game_dir(id: &str) -> PathBuf {
+    if let Some(p) = CORE_DIRS.lock().unwrap().get(id) {
+        return p.clone();
+    }
     paths::instance_dir(id).join("minecraft")
 }
 
