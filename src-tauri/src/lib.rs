@@ -7,6 +7,7 @@ mod core;
 mod core_instances;
 mod core_content;
 mod core_mods;
+mod core_packs;
 mod error;
 mod hardware;
 mod hud;
@@ -273,8 +274,8 @@ async fn delete_instance(id: String) -> R<()> {
 }
 
 #[tauri::command]
-fn duplicate_instance(id: String) -> R<Instance> {
-    instances::duplicate(&id)
+async fn duplicate_instance(app: AppHandle, id: String) -> R<Instance> {
+    core_packs::duplicate_instance(&app, &id).await
 }
 
 #[tauri::command]
@@ -346,11 +347,7 @@ async fn install_instance(_app: AppHandle, id: String) -> R<()> {
 
 #[tauri::command]
 async fn repair_instance(app: AppHandle, id: String) -> R<()> {
-    let mut inst = instances::get(&id)?;
-    inst.installed = false;
-    instances::save(&inst)?;
-    let _ = std::fs::remove_dir_all(paths::natives_dir(&inst.version_id));
-    install_instance(app, id).await
+    core_packs::repair_instance(&app, &id).await
 }
 
 #[tauri::command]
@@ -558,45 +555,12 @@ async fn create_from_mrpack(app: &AppHandle, path: &std::path::Path, pid: &str) 
 
 #[tauri::command]
 async fn import_mrpack(app: AppHandle, path: String) -> R<Instance> {
-    let pid = "modpack:import".to_string();
-    let r = create_from_mrpack(&app, std::path::Path::new(&path), &pid).await;
-    match &r {
-        Ok(_) => net::emit_progress(&app, &pid, "Модпак установлен", 100.0, 0.0, true, None),
-        Err(e) => net::emit_progress(&app, &pid, "Ошибка", 0.0, 0.0, true, Some(e.0.clone())),
-    }
-    r
+    core_packs::import_mrpack(&app, &path).await
 }
 
 #[tauri::command]
 async fn install_modpack(app: AppHandle, project_id: String, version_id: Option<String>) -> R<Instance> {
-    let pid = format!("modpack:{project_id}");
-    net::emit_progress(&app, &pid, "Загрузка модпака", 0.0, 0.0, false, None);
-    let res: R<Instance> = async {
-        let v = match version_id {
-            Some(v) => modrinth::version(&v).await?,
-            None => modrinth::project_versions(&project_id, &[], &[]).await?.into_iter().next().ok_or_else(|| anyhow::anyhow!("У модпака нет версий"))?,
-        };
-        let file = v["files"]
-            .as_array()
-            .and_then(|f| f.iter().find(|x| x["primary"].as_bool().unwrap_or(false)).or_else(|| f.first()))
-            .ok_or_else(|| anyhow::anyhow!("Нет файла модпака"))?
-            .clone();
-        let tmp = paths::cache_dir().join(format!("{project_id}.mrpack"));
-        let hash = file["hashes"]["sha512"].as_str().map(|s| net::Hash::Sha512(s.into())).unwrap_or(net::Hash::None);
-        net::download_file(file["url"].as_str().ok_or_else(|| anyhow::anyhow!("нет ссылки"))?, &tmp, &hash, None).await?;
-        let mut inst = create_from_mrpack(&app, &tmp, &pid).await?;
-        inst.modpack_project = project_id.clone();
-        inst.modpack_version = v["id"].as_str().unwrap_or("").to_string();
-        instances::save(&inst)?;
-        let _ = std::fs::remove_file(&tmp);
-        Ok(inst)
-    }
-    .await;
-    match &res {
-        Ok(_) => net::emit_progress(&app, &pid, "Модпак установлен", 100.0, 0.0, true, None),
-        Err(e) => net::emit_progress(&app, &pid, "Ошибка", 0.0, 0.0, true, Some(e.0.clone())),
-    }
-    res
+    core_packs::install_modpack(&app, &project_id, version_id).await
 }
 
 #[tauri::command]
@@ -627,8 +591,7 @@ async fn update_modpack(app: AppHandle, id: String) -> R<bool> {
 
 #[tauri::command]
 async fn export_mrpack(id: String, dest: String) -> R<()> {
-    let inst = instances::get(&id)?;
-    modrinth::export_mrpack(&inst, std::path::Path::new(&dest)).await
+    core_packs::export_mrpack(&id, &dest).await
 }
 
 #[derive(Serialize)]
@@ -812,6 +775,7 @@ pub fn run() {
                 let h = handle.clone();
                 tauri::async_runtime::spawn(async move {
                     let code = selftest_run(h.clone(), mc, loader).await;
+                    std::process::exit(code); // the core keeps background tasks alive: leave at once
                     h.exit(code);
                 });
             }
@@ -985,7 +949,7 @@ async fn selftest_run(app: AppHandle, mc: String, loader: String) -> i32 {
         let hold = std::env::var("NOCTURNUM_HOLD").ok().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
         if joined && joined_at.is_none() { joined_at = Some(std::time::Instant::now()); }
         if joined && hold > 0 && joined_at.map(|t| t.elapsed().as_secs() < hold).unwrap_or(true) { continue; }
-        if joined { say!("SELFTEST OK: game reached resource loading"); let _ = core_instances::kill(&inst.id).await; tokio::time::sleep(std::time::Duration::from_secs(2)).await; return 0; }
+        if joined { say!("SELFTEST OK: game reached resource loading"); say!("killing"); let k = tokio::time::timeout(std::time::Duration::from_secs(20), core_instances::kill(&inst.id)).await; say!("kill result: {:?}", k.as_ref().map(|r| r.is_ok()).map_err(|_| "TIMEOUT")); tokio::time::sleep(std::time::Duration::from_secs(2)).await; return 0; }
         if !running && finished.load(std::sync::atomic::Ordering::SeqCst) { say!("SELFTEST FAIL: game not running / exited"); return 1; }
         if start.elapsed().as_secs() > 900 { say!("SELFTEST FAIL: timeout"); let _ = core_instances::kill(&inst.id).await; return 1; }
     }
