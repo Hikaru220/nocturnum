@@ -10,6 +10,7 @@ mod core_mods;
 mod core_packs;
 mod core_java;
 mod core_skins;
+mod core_migrate;
 mod error;
 mod hardware;
 mod hud;
@@ -779,9 +780,11 @@ pub fn run() {
         .setup(move |app| {
             let handle = app.handle().clone();
             // the core (Modrinth App library) starts in the background; commands wait for it
-            tauri::async_runtime::spawn(async {
-                if let Err(e) = core::init().await {
-                    applog(&format!("core init failed: {e}"));
+            let migrate_handle = handle.clone();
+            tauri::async_runtime::spawn(async move {
+                match core::init().await {
+                    Ok(()) => core_migrate::migrate_all(&migrate_handle).await, // old instances move into the core once
+                    Err(e) => applog(&format!("core init failed: {e}")),
                 }
             });
             #[cfg(debug_assertions)]
