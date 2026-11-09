@@ -34,6 +34,11 @@ public final class Config {
         "scoreboard", "tabeditor", "notifications", "colorgrade", "motionblur", "weather", "selfnametag", "fovstates", "togglesprint",
         "targetesp", "hitboxes", "friends", "streamer", "memory", "playtime", "stopwatch", "perfmonitor", "boost", "bgfps", "compass",
         "saturation", "fpsping", "clock", "speed", "totems", "itemhand", "potions");
+    /** Spec "лаунчер на ядре Modrinth App" 5.1: ONLY these functions stay in the mod; everything else is removed
+     *  (never ticked, drawn or listed). Replaced by ready-made mods where the build has them (spec 6.3). */
+    private static final java.util.Set<String> KEEP = java.util.Set.of("clickgui", "discordrpc", "loading", "mainmenu", "lowfire", "watermark",
+        "armor", "keystrokes", "cps", "targethud", "itemcounter", "mediaplayer", "deathcoords", "screenshots", "fullbright");
+    private static boolean removed(String id) { return REMOVED.contains(id) || !KEEP.contains(id); }
     /** ТЗ 8.1: everything else starts off. */
     private static final java.util.Set<String> DEFAULT_ON = java.util.Set.of("clickgui", "watermark", "armor", "itemcounter", "lowfire",
         "leaveprotection", "discordrpc", "loading", "mainmenu", "crosshair");
@@ -47,7 +52,7 @@ public final class Config {
     /** One-time clean-up: removed modules off, defaults per the specification. */
     public static void cleanup() {
         for (Module m : MODULES) {
-            if (REMOVED.contains(m.id)) m.silentOff();
+            if (removed(m.id)) m.silentOff();
             else if (loadedVersion < 2 && !DEFAULT_ON.contains(m.id)) m.silentOff();
         }
         if (loadedVersion < 2) {
@@ -61,7 +66,7 @@ public final class Config {
         String by = REPLACED_BY.get(m.id);
         boolean replaced = by != null && gg.nocturnum.hud.platform.Platform.modLoaded(by);
         if (replaced) m.silentOff();
-        if (!REMOVED.contains(m.id) && !replaced) ACTIVE.add(m);
+        if (!removed(m.id) && !replaced) ACTIVE.add(m);
     }
 
     @SuppressWarnings("unchecked")
