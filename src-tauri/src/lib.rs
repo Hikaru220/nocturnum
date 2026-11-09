@@ -605,23 +605,12 @@ async fn import_curseforge(app: AppHandle, path: String) -> R<CfResult> {
         "fabric" | "quilt" | "forge" | "neoforge" => meta.loader.clone(),
         _ => "vanilla".to_string(),
     };
-    let id = instances::unique_id(&meta.name);
-    let inst = Instance {
-        id: id.clone(),
-        name: meta.name.clone(),
-        mc_version: meta.mc.clone(),
-        loader,
-        loader_version: meta.loader_version.clone(),
-        account_id: st.last_account.clone(),
-        created_at: instances::now(),
-        ..Default::default()
-    };
-    instances::save(&inst)?;
-    if st.apply_preset {
-        preset_for(&id)?;
-    }
+    let req = NewInstance { name: meta.name.clone(), mc_version: meta.mc.clone(), loader, loader_version: meta.loader_version.clone(), hud_enabled: false, account_id: String::new() };
+    let inst = core_instances::create_instance(&app, &req).await?;
+    core_instances::wait_installed(&inst.id).await?;
     let pid = "modpack:cf".to_string();
     let missing = modrinth::apply_cf(&app, &pid, &inst, &p, &meta, st.downloads_threads as usize).await?;
+    let _ = theseus::instance::sync_content_files(&inst.id).await;
     net::emit_progress(&app, &pid, "Готово", 100.0, 0.0, true, None);
     Ok(CfResult { instance: inst, missing })
 }
