@@ -42,7 +42,6 @@ pub fn instance_dir(id: &str) -> PathBuf { instances_dir().join(id) }
 pub fn libraries_dir() -> PathBuf { root().join("meta").join("libraries") }
 pub fn assets_dir() -> PathBuf { root().join("meta").join("assets") }
 pub fn versions_dir() -> PathBuf { root().join("meta").join("versions") }
-pub fn natives_dir(id: &str) -> PathBuf { root().join("meta").join("natives").join(id) }
 pub fn java_dir() -> PathBuf { root().join("java") }
 pub fn skins_dir() -> PathBuf { root().join("skins") }
 pub fn logs_dir() -> PathBuf { root().join("logs") }
@@ -55,16 +54,3 @@ pub fn ensure_dirs() -> std::io::Result<()> {
     Ok(())
 }
 
-/// Maven coordinate "group:artifact:version[:classifier][@ext]" -> relative path.
-pub fn maven_path(name: &str) -> String {
-    let (coord, ext) = match name.split_once('@') {
-        Some((c, e)) => (c, e),
-        None => (name, "jar"),
-    };
-    let parts: Vec<&str> = coord.split(':').collect();
-    let group = parts[0].replace('.', "/");
-    let artifact = parts.get(1).copied().unwrap_or("");
-    let version = parts.get(2).copied().unwrap_or("");
-    let classifier = parts.get(3).map(|c| format!("-{}", c)).unwrap_or_default();
-    format!("{}/{}/{}/{}-{}{}.{}", group, artifact, version, artifact, version, classifier, ext)
-}

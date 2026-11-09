@@ -538,33 +538,6 @@ async fn mr_update_all(app: AppHandle, instance_id: String) -> R<usize> {
 
 // ---------- modpacks ----------
 
-async fn create_from_mrpack(app: &AppHandle, path: &std::path::Path, pid: &str) -> R<Instance> {
-    let st = settings::load();
-    let (meta, _) = modrinth::read_mrpack_meta(path)?;
-    let loader_version = if meta.loader_version.is_empty() && meta.loader != "vanilla" {
-        loaders::list_loader_versions(&meta.loader, &meta.mc).await?.into_iter().next().map(|v| v.version).unwrap_or_default()
-    } else {
-        meta.loader_version.clone()
-    };
-    let id = instances::unique_id(&meta.name);
-    let inst = Instance {
-        id: id.clone(),
-        name: meta.name,
-        mc_version: meta.mc,
-        loader: meta.loader,
-        loader_version,
-        account_id: st.last_account.clone(),
-        hud_enabled: false,
-        created_at: instances::now(),
-        ..Default::default()
-    };
-    instances::save(&inst)?;
-    if st.apply_preset {
-        preset_for(&id)?;
-    }
-    modrinth::apply_mrpack(app, pid, &inst, path, false, st.downloads_threads as usize).await?;
-    Ok(inst)
-}
 
 #[tauri::command]
 async fn import_mrpack(app: AppHandle, path: String) -> R<Instance> {

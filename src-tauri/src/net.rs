@@ -31,13 +31,6 @@ pub async fn get_json<T: serde::de::DeserializeOwned>(url: &str) -> R<T> {
     Ok(resp.json::<T>().await.with_context(|| format!("parse {url}"))?)
 }
 
-pub async fn get_text(url: &str) -> R<String> {
-    let resp = CLIENT.get(url).send().await?;
-    if !resp.status().is_success() {
-        return Err(anyhow!("{url}: HTTP {}", resp.status()).into());
-    }
-    Ok(resp.text().await?)
-}
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

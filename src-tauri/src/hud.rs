@@ -13,8 +13,6 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
 pub const FABRIC_API: &str = "P7dR8mSH";
-pub const SODIUM: &str = "AANobbMI";
-pub const LITHIUM: &str = "gvQqBUqZ";
 
 /// Layer 1 of the optimisation stack (ТЗ пакет 2, п. 7.1): original files from Modrinth, never bundled.
 /// ТЗ 7.2: ready-made mods that replace our own functions (minimap, zoom, chat, F3 info, skins, status effects).
@@ -81,60 +79,6 @@ pub(crate) fn bundled_jar(app: &AppHandle, mc: &str) -> Option<PathBuf> {
     if p.exists() { Some(p) } else { None }
 }
 
-pub async fn install(app: &AppHandle, inst: &Instance) -> R<()> {
-    let st = status(app, &inst.mc_version, &inst.loader);
-    if !st.supported {
-        return Err(anyhow!(st.reason).into());
-    }
-    let (dir, m) = manifest(app).ok_or_else(|| anyhow!("manifest HUD не найден"))?;
-    let file = m["versions"][&inst.mc_version].as_str().ok_or_else(|| anyhow!("нет файла HUD"))?;
-    let src = dir.join(file);
-    if !src.exists() {
-        return Err(anyhow!("Файл HUD-мода {file} отсутствует").into());
-    }
-    let mods = instances::game_dir(&inst.id).join("mods");
-    std::fs::create_dir_all(&mods)?;
-    // remove older builds
-    if let Ok(rd) = std::fs::read_dir(&mods) {
-        for e in rd.flatten() {
-            let n = e.file_name().to_string_lossy().to_string();
-            if n.starts_with("nocturnum-hud") && n != file && !n.ends_with(".disabled") {
-                let _ = std::fs::remove_file(e.path());
-            }
-        }
-    }
-    let dest = mods.join(file);
-    let need = !dest.exists() || std::fs::metadata(&dest).map(|m| m.len()).unwrap_or(0) != std::fs::metadata(&src)?.len();
-    if need {
-        std::fs::copy(&src, &dest)?;
-    }
-    let idx = instances::load_index(&inst.id);
-    let has = |p: &str| idx.values().any(|m| m.project_id == p);
-    let pid = format!("hud:{}", inst.id);
-    if !has(FABRIC_API) {
-        modrinth::install_project(app, &pid, inst, FABRIC_API, None, "mod").await?;
-    }
-    let s = settings::load();
-    {
-        let all: Vec<&str> = if s.install_sodium || s.install_optimization { OPTIMIZATION_SLUGS.iter().chain(READY_MOD_SLUGS.iter()).copied().collect() } else { READY_MOD_SLUGS.to_vec() };
-        for slug in all {
-            // resolve slug -> project id so the "already installed" check works
-            let Ok(p) = modrinth::project(slug).await else { continue };
-            let Some(pid2) = p["id"].as_str() else { continue };
-            if idx.values().any(|m| m.project_id == pid2) {
-                continue;
-            }
-            // incompatible with this game version -> skipped quietly, never crashes the launch
-            if let Err(e) = modrinth::install_project(app, &pid, inst, pid2, None, "mod").await {
-                crate::net::emit_progress(app, &pid, &format!("{slug}: пропущен ({e})"), 0.0, 0.0, false, None);
-            }
-        }
-    }
-    // safety net: required `depends` from every jar's fabric.mod.json must be present
-    fix_missing_deps(app, &pid, inst).await;
-    tune_dynamic_fps(&mods);
-    Ok(())
-}
 
 /// Dynamic FPS defaults throttle a window that is merely not focused (1 FPS) or only hovered (60 FPS), which makes the
 /// game crawl while a browser is open next to it. Keep full speed there; a minimised window (0 FPS) and a long idle
@@ -219,37 +163,6 @@ pub(crate) fn builtin_dep(id: &str) -> bool {
     matches!(id, "minecraft" | "java" | "fabricloader" | "fabric" | "quilt_loader" | "fabric-api") || (id.starts_with("fabric-") && !id.starts_with("fabric-language-"))
 }
 
-/// Up to three passes: find required mod ids no installed jar provides, install them from Modrinth by id/slug.
-/// Anything that cannot be resolved is skipped quietly (the mod just stays unsatisfied), never an error.
-async fn fix_missing_deps(app: &AppHandle, pid: &str, inst: &Instance) {
-    let mods = instances::game_dir(&inst.id).join("mods");
-    let mut tried: std::collections::HashSet<String> = Default::default();
-    for _ in 0..3 {
-        let mut provided = Default::default();
-        let mut required = Default::default();
-        if let Ok(rd) = std::fs::read_dir(&mods) {
-            for e in rd.flatten() {
-                let p = e.path();
-                if p.extension().map(|x| x == "jar").unwrap_or(false) {
-                    scan_jar(&p, &mut provided, &mut required, 0);
-                }
-            }
-        }
-        let missing: Vec<String> = required.iter().filter(|r| !provided.contains(*r) && !builtin_dep(r) && !tried.contains(*r)).cloned().collect();
-        if missing.is_empty() {
-            return;
-        }
-        for id in missing {
-            tried.insert(id.clone());
-            let Ok(p) = modrinth::project(&id).await else { continue };
-            let Some(proj) = p["id"].as_str() else { continue };
-            match modrinth::install_project(app, pid, inst, proj, None, "mod").await {
-                Ok(_) => crate::net::emit_progress(app, pid, &format!("{id}: докачана зависимость"), 0.0, 0.0, false, None),
-                Err(e) => crate::net::emit_progress(app, pid, &format!("{id}: зависимость пропущена ({e})"), 0.0, 0.0, false, None),
-            }
-        }
-    }
-}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -12,20 +12,6 @@ use windows::Win32::System::Registry::{
 use windows::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
 use windows::Win32::UI::Shell::{IShellLinkW, ShellLink};
 
-/// "Settings > Display > Graphics" for one exe: GpuPreference=2 = high performance (HKCU, a single value).
-pub fn set_gpu_preference(exe: &Path) {
-    unsafe {
-        let mut key = HKEY::default();
-        let sub = HSTRING::from(r"Software\Microsoft\DirectX\UserGpuPreferences");
-        if RegCreateKeyExW(HKEY_CURRENT_USER, &sub, None, PCWSTR::null(), REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, None, &mut key, None).is_err() {
-            return;
-        }
-        let name = HSTRING::from(exe.to_string_lossy().as_ref());
-        let val: Vec<u8> = "GpuPreference=2;\0".encode_utf16().flat_map(|c| c.to_le_bytes()).collect();
-        let _ = RegSetValueExW(key, &name, None, REG_SZ, Some(&val));
-        let _ = RegCloseKey(key);
-    }
-}
 
 /// Names of the installed video adapters, read from the display-class registry keys.
 pub fn gpu_names() -> Vec<String> {
@@ -47,14 +33,6 @@ pub fn gpu_names() -> Vec<String> {
     out
 }
 
-pub fn kill_process(pid: u32) {
-    unsafe {
-        if let Ok(h) = OpenProcess(PROCESS_TERMINATE, false, pid) {
-            let _ = TerminateProcess(h, 1);
-            let _ = CloseHandle(h);
-        }
-    }
-}
 
 /// Creates a .lnk file through the shell COM interface.
 pub fn create_shortcut(lnk: &Path, target: &Path, args: &str) -> windows::core::Result<()> {
@@ -69,30 +47,6 @@ pub fn create_shortcut(lnk: &Path, target: &Path, args: &str) -> windows::core::
     }
 }
 
-/// Windows 11 "efficiency mode" (EcoQoS) for one process; pid 0 = this process. on=false asks for full speed.
-pub fn set_eco(pid: u32, on: bool) {
-    use windows::Win32::System::Threading::{
-        GetCurrentProcess, ProcessPowerThrottling, SetProcessInformation, PROCESS_POWER_THROTTLING_CURRENT_VERSION,
-        PROCESS_POWER_THROTTLING_EXECUTION_SPEED, PROCESS_POWER_THROTTLING_STATE, PROCESS_SET_INFORMATION,
-    };
-    unsafe {
-        let (h, own) = if pid == 0 { (GetCurrentProcess(), false) } else {
-            match OpenProcess(PROCESS_SET_INFORMATION, false, pid) {
-                Ok(h) => (h, true),
-                Err(_) => return,
-            }
-        };
-        let st = PROCESS_POWER_THROTTLING_STATE {
-            Version: PROCESS_POWER_THROTTLING_CURRENT_VERSION,
-            ControlMask: PROCESS_POWER_THROTTLING_EXECUTION_SPEED,
-            StateMask: if on { PROCESS_POWER_THROTTLING_EXECUTION_SPEED } else { 0 },
-        };
-        let _ = SetProcessInformation(h, ProcessPowerThrottling, &st as *const _ as *const core::ffi::c_void, std::mem::size_of::<PROCESS_POWER_THROTTLING_STATE>() as u32);
-        if own {
-            let _ = CloseHandle(h);
-        }
-    }
-}
 
 /// Freezes (or wakes) the hidden WebView2 so the sleeping launcher costs no CPU/RAM while the game runs.
 pub fn webview_suspend(w: &tauri::WebviewWindow, on: bool) {
