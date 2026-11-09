@@ -237,7 +237,7 @@ struct NewInstance {
     account_id: String,
 }
 
-fn smart_ram() -> u32 {
+pub(crate) fn smart_ram() -> u32 {
     let mut sys = sysinfo::System::new();
     sys.refresh_memory();
     hardware::smart_ram_mb(sys.total_memory() / 1024 / 1024, 0)

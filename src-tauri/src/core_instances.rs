@@ -164,6 +164,12 @@ pub async fn create_instance(app: &AppHandle, req: &crate::NewInstance) -> R<UiI
             if crate::settings::load().apply_preset {
                 let _ = crate::preset_for(&id2);
             }
+            // memory by the table of spec 3.6 (8 GB -> 3, 16 -> 4, 32+ -> 6; never more than half of the RAM)
+            let mut lo = InstanceLaunchOverridesPatch::default();
+            lo.memory = Some(Some(MemorySettings { maximum: crate::smart_ram() }));
+            let mut patch = EditInstance::default();
+            patch.launch_overrides = Some(lo);
+            let _ = theseus::instance::edit(&id2, patch).await;
             if with_mods {
                 crate::core_mods::install_set(&app2, &id2, &mc, &loader).await;
             } else {
